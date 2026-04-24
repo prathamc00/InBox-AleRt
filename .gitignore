@@ -35,16 +35,8 @@ coverage/
 
 # Sensitive / secret files
 *.json
-twilio_2FA_recovery_code.txt
-InboxAlert_Proposal.docx
-proposal_text.txt
+
 report.md
-generate_pdf.py
-test_outlook.py
-FIX_OUTLOOK_ALERTS.md
-WHATSAPP_SETUP.md
-PRESENTATION_SCRIPT.md
-InboxAlert_Presentation.pdf
 start_celery.bat
 
 # Logs
