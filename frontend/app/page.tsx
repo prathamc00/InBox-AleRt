@@ -22,10 +22,10 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="fixed top-0 inset-x-0 h-20 z-50 flex items-center justify-between px-6 md:px-12 max-w-7xl mx-auto w-full backdrop-blur-md bg-void/50 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-            <Mail className="w-4 h-4 text-white" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg" style={{background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 0 20px rgba(99,102,241,0.5)"}}>
+            <Mail className="w-4 h-4 text-white" strokeWidth={2.5} />
           </div>
-          <span className="font-bold text-xl tracking-wide text-white">InboxAlert.</span>
+          <span className="font-bold text-xl tracking-wide text-white">InboxAlert<span style={{color: "#818cf8"}}>.</span></span>
         </div>
         <div className="flex items-center gap-6">
           <Link href="#features" className="hidden md:block text-sm font-medium text-text-secondary hover:text-white transition-colors">
@@ -314,10 +314,10 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-white/5 py-12 text-center relative z-10 bg-void">
         <div className="flex items-center justify-center gap-3 mb-6">
-          <div className="w-6 h-6 rounded bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center">
-            <Mail className="w-3 h-3 text-white" />
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{background: "linear-gradient(135deg, #6366f1, #8b5cf6)"}}>
+            <Mail className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
           </div>
-          <span className="font-bold text-lg tracking-wide text-white">InboxAlert.</span>
+          <span className="font-bold text-lg tracking-wide text-white">InboxAlert<span style={{color: "#818cf8"}}>.</span></span>
         </div>
         <p className="text-text-tertiary text-sm">
           &copy; {new Date().getFullYear()} InboxAlert Inc. All rights reserved. <br/>

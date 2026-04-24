@@ -32,8 +32,8 @@ export default function Sidebar() {
       {/* Brand */}
       <div className="h-16 flex items-center px-6 border-b border-border-subtle/50">
         <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-black" />
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-lg" style={{background: "linear-gradient(135deg, #6366f1, #8b5cf6)"}}>
+            <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="font-semibold text-sm tracking-tight text-white">InboxAlert</span>
         </Link>
