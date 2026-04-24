@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  
+  /* Sleek, sophisticated SaaS dark theme (Linear/Vercel inspired) */
+  --color-void: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-raised: #111111;
+  --color-surface-hover: #1a1a1a;
+  --color-border-subtle: #222222;
+  --color-border-strong: #333333;
+  
+  /* Minimalist Accents */
+  --color-brand-400: #ededed;
+  --color-brand-500: #ffffff;
+  --color-brand-600: #d4d4d8;
+  
+  --color-accent: #3b82f6; /* Subtle blue for active states if needed */
+  --color-alert: #ef4444;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  
+  --color-text-primary: #ededed;
+  --color-text-secondary: #a1a1aa;
+  --color-text-tertiary: #71717a;
+}
+
+/* Custom Utilities */
+body {
+  background-color: var(--color-void);
+  color: var(--color-text-primary);
+}
+
+.mesh-bg {
+  background-color: var(--color-void);
+  background-image: 
+    radial-gradient(ellipse 80% 80% at 50% -20%, rgba(255,255,255,0.05), transparent);
+}
+
+.glass-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Crisp hardware accelerated borders */
+.premium-border {
+  border: 1px solid var(--color-border-subtle);
+  background: linear-gradient(180deg, var(--color-surface-raised) 0%, var(--color-surface) 100%);
+}
+
+/* Minimal Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong); 
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary); 
+}
+
+/* Base Inputs/Buttons reset for clean UI */
+input[type="range"] {
+  -webkit-appearance: none;
+  background: var(--color-border-subtle);
+  height: 4px;
+  border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: var(--color-text-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-void);
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+}

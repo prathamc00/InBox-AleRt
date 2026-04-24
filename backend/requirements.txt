@@ -1,0 +1,49 @@
+# ── Web Framework ──────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# ── Data Validation ────────────────────────────────────────
+pydantic[email]==2.7.1
+pydantic-settings==2.2.1
+
+# ── Database ───────────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.30
+asyncpg==0.29.0
+alembic==1.13.1
+
+# ── Cache / Queue ──────────────────────────────────────────
+redis==5.0.4
+celery[redis]==5.4.0
+
+# ── Security ───────────────────────────────────────────────
+cryptography==42.0.8
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+itsdangerous==2.2.0
+
+# ── HTTP Client ────────────────────────────────────────────
+httpx==0.27.0
+stripe==10.12.0
+
+# ── Google Auth & API ──────────────────────────────────────
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.129.0
+
+# ── Microsoft Auth ─────────────────────────────────────────
+msal==1.28.0
+
+# ── Rate Limiting ──────────────────────────────────────────
+slowapi==0.1.9
+limits==3.12.0
+
+# ── Content Security ───────────────────────────────────────
+bleach==6.1.0
+
+# ── Logging ────────────────────────────────────────────────
+structlog==24.1.0
+
+# ── Email Validation ───────────────────────────────────────
+email-validator==2.1.1
