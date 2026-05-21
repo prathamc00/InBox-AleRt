@@ -73,7 +73,7 @@ class OutlookConnector:
             "changeType": "created",
             "notificationUrl": webhook_url,
             "resource": "me/mailFolders('Inbox')/messages",
-            "expirationDateTime": expiration.isoformat().replace("+00:00", "Z"),
+            "expirationDateTime": expiration.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "clientState": settings.OUTLOOK_WEBHOOK_CLIENT_STATE,
         }
         async with httpx.AsyncClient() as client:

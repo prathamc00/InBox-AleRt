@@ -47,9 +47,12 @@ async def process_whatsapp_message(from_number: str, message_text: str, button_i
     phone = from_number.replace("+", "").strip()
     
     async with AsyncSessionLocal() as db:
-        # Find user by phone number
+        # Find user by phone number (support both with and without leading '+')
         user_result = await db.execute(
-            select(User).where(User.whatsapp_number == phone)
+            select(User).where(
+                (User.whatsapp_number == phone) |
+                (User.whatsapp_number == f"+{phone}")
+            )
         )
         user = user_result.scalar_one_or_none()
         

@@ -15,7 +15,7 @@ from models.user import User
 from connectors.gmail import GmailConnector
 from connectors.outlook import OutlookConnector
 from engine.scorer import process_incoming_email
-from whatsapp.notifier import notifier
+from whatsapp.meta_notifier import meta_notifier as notifier
 
 log = structlog.get_logger()
 
@@ -82,7 +82,7 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
         
         # Determine status
         status = "pending"
-        if score >= 80:
+        if score >= 50:
             status = "alerted"
         
         # Save EmailRecord
@@ -106,7 +106,7 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
         await db.flush() # get record.id
         
         # Trigger WhatsApp Notification
-        if score >= 80 and user and user.whatsapp_number:
+        if score >= 50 and user and user.whatsapp_number:
             if reply_draft:
                 # Tell user we auto-replied
                 notifier.send_auto_reply_notification(
@@ -204,7 +204,7 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
         )
 
         status = "pending"
-        if score >= 80:
+        if score >= 50:
             status = "alerted"
 
         record = EmailRecord(
@@ -226,7 +226,7 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
         db.add(record)
         await db.flush()
 
-        if score >= 80 and user and user.whatsapp_number:
+        if score >= 50 and user and user.whatsapp_number:
             if reply_draft:
                 notifier.send_auto_reply_notification(
                     to_number=user.whatsapp_number,

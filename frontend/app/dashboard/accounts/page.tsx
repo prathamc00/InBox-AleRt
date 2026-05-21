@@ -65,11 +65,21 @@ export default function AccountsPage() {
   };
 
   const handleConnectGoogle = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/auth/google/login`;
+    const token = localStorage.getItem("access_token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const redirectUrl = token
+      ? `${baseUrl}/auth/google/login?token=${encodeURIComponent(token)}`
+      : `${baseUrl}/auth/google/login`;
+    window.location.href = redirectUrl;
   };
 
   const handleConnectMicrosoft = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/auth/microsoft/login`;
+    const token = localStorage.getItem("access_token");
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const redirectUrl = token
+      ? `${baseUrl}/auth/microsoft/login?token=${encodeURIComponent(token)}`
+      : `${baseUrl}/auth/microsoft/login`;
+    window.location.href = redirectUrl;
   };
 
   return (

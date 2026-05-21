@@ -147,7 +147,11 @@ class MetaWhatsAppNotifier:
         subject: str = "",
         original_summary: str = ""
     ) -> bool:
-        """Notify user that AI auto-replied to an email."""
+        """
+        Notify user that AI auto-replied to an email.
+        Tries to send detailed free-form text first (requires active 24-hour window).
+        If that fails, falls back to the pre-approved hello_world template to ensure delivery.
+        """
         to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
         
         body_text = (
@@ -159,7 +163,18 @@ class MetaWhatsAppNotifier:
             f"Reply CANCEL within 60s to undo."
         )
         
-        return self.send_text_message(to_number, body_text)
+        ok = self.send_text_message(to_number, body_text)
+        if ok:
+            return True
+            
+        log.info("Auto-reply custom text message failed, falling back to template")
+        ok, _, _ = self._send_request({
+            "messaging_product": "whatsapp",
+            "to": to_number,
+            "type": "template",
+            "template": {"name": "hello_world", "language": {"code": "en"}}
+        })
+        return ok
     
     def send_template_message(
         self,
@@ -196,30 +211,49 @@ class MetaWhatsAppNotifier:
         return ok
     
     def send_test_message(self, to_number: str) -> bool:
-        """Send a test message to verify connectivity."""
-        body = (
-            "✅ InboxAlert WhatsApp connected successfully.\n\n"
-            "You will now receive high-priority email alerts here."
-        )
-        return self.send_text_message(to_number, body)
-    
+        """Send a test message using hello_world template."""
+        return self.send_template_message(to_number, "hello_world", "en")
+
     def send_test_message_result(self, to_number: str) -> tuple[bool, str]:
         """Send test message and return detailed result."""
-        body = (
-            "✅ InboxAlert WhatsApp connected successfully.\n\n"
-            "You will now receive high-priority email alerts here."
-        )
         to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
-        
-        payload = {
+        ok, msg, _ = self._send_request({
             "messaging_product": "whatsapp",
             "to": to_number,
-            "type": "text",
-            "text": {"body": body}
-        }
-        
-        ok, msg, _ = self._send_request(payload)
+            "type": "template",
+            "template": {"name": "hello_world", "language": {"code": "en"}}
+        })
         return ok, msg
+
+    def send_alert(self, to_number: str, sender: str, subject: str, summary: str, score: int, email_id: str) -> bool:
+        """
+        Send alert.
+        Tries to send an interactive alert with buttons first (requires active 24-hour window).
+        If that fails, falls back to the pre-approved hello_world template to guarantee delivery.
+        """
+        to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
+        
+        # Try sending the interactive alert first
+        ok = self.send_alert_with_buttons(
+            to_number=to_number,
+            sender=sender,
+            subject=subject,
+            summary=summary,
+            score=score,
+            email_id=email_id
+        )
+        if ok:
+            return True
+            
+        # Fallback to the hello_world template if interactive fails (e.g., outside 24h window)
+        log.info("Interactive alert failed, falling back to template message")
+        ok, _, _ = self._send_request({
+            "messaging_product": "whatsapp",
+            "to": to_number,
+            "type": "template",
+            "template": {"name": "hello_world", "language": {"code": "en"}}
+        })
+        return ok
     
     def mark_message_as_read(self, message_id: str) -> bool:
         """Mark an incoming message as read."""

@@ -13,6 +13,8 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth.utils import get_external_base_url
+
 from connectors.gmail import GmailConnector
 from core.config import settings
 from core.security import (
@@ -20,6 +22,7 @@ from core.security import (
     create_refresh_token,
     encrypt_token,
     generate_oauth_state,
+    decode_access_token,
 )
 from db.session import get_db
 from models.account import ConnectedAccount
@@ -45,15 +48,29 @@ SCOPES = [
 
 
 @router.get("/login")
-async def google_login(request: Request):
+async def google_login(request: Request, token: str | None = None):
     """Redirect user to Google OAuth consent screen."""
     state = generate_oauth_state()
     # Store state in server-side session (Redis-backed in prod)
     request.session["oauth_state"] = state
 
+    # Parse and store current user ID from JWT if logging in to link account
+    if token:
+        try:
+            payload = decode_access_token(token)
+            user_id = payload.get("sub")
+            if user_id:
+                request.session["current_user_id"] = user_id
+        except Exception:
+            pass
+
+    base_url = get_external_base_url(request)
+    redirect_uri = f"{base_url}/auth/google/callback"
+    request.session["google_redirect_uri"] = redirect_uri
+
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
-        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": " ".join(SCOPES),
         "state": state,
@@ -83,6 +100,8 @@ async def google_callback(
     if not stored_state or stored_state != state:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
 
+    redirect_uri = request.session.pop("google_redirect_uri", None) or settings.GOOGLE_REDIRECT_URI
+
     # Exchange code for tokens
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
@@ -91,7 +110,7 @@ async def google_callback(
                 "code": code,
                 "client_id": settings.GOOGLE_CLIENT_ID,
                 "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                "redirect_uri": redirect_uri,
                 "grant_type": "authorization_code",
             },
         )
@@ -119,11 +138,19 @@ async def google_callback(
     display_name = info.get("name", email)
     avatar_url = info.get("picture")
 
-    # Upsert user
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    # Retrieve current user if we are linking an account
+    current_user_id = request.session.pop("current_user_id", None)
+    user = None
+    if current_user_id:
+        user_result = await db.execute(select(User).where(User.id == uuid.UUID(current_user_id)))
+        user = user_result.scalar_one_or_none()
 
     is_new_user = False
+    if not user:
+        # Standard flow or fallback: Find by email
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+
     if not user:
         is_new_user = True
         tenant_id = uuid.uuid4()

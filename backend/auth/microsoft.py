@@ -6,11 +6,15 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
+import httpx
 import msal
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from jose import JWTError
+
+from auth.utils import get_external_base_url
 
 from core.config import settings
 from core.security import (
@@ -18,6 +22,7 @@ from core.security import (
     create_refresh_token,
     encrypt_token,
     generate_oauth_state,
+    decode_access_token,
 )
 from connectors.outlook import OutlookConnector
 from db.session import get_db
@@ -44,16 +49,30 @@ def _build_msal_app() -> msal.ConfidentialClientApplication:
 
 
 @router.get("/login")
-async def microsoft_login(request: Request):
+async def microsoft_login(request: Request, token: str | None = None):
     """Redirect user to Microsoft OAuth consent screen."""
     state = generate_oauth_state()
     request.session["oauth_state"] = state
+
+    # Parse and store current user ID from JWT if logging in to link account
+    if token:
+        try:
+            payload = decode_access_token(token)
+            user_id = payload.get("sub")
+            if user_id:
+                request.session["current_user_id"] = user_id
+        except Exception:
+            pass
+
+    base_url = get_external_base_url(request)
+    redirect_uri = f"{base_url}/auth/microsoft/callback"
+    request.session["microsoft_redirect_uri"] = redirect_uri
 
     msal_app = _build_msal_app()
     auth_url = msal_app.get_authorization_request_url(
         scopes=SCOPES,
         state=state,
-        redirect_uri=settings.MICROSOFT_REDIRECT_URI,
+        redirect_uri=redirect_uri,
     )
     return RedirectResponse(url=auth_url)
 
@@ -70,11 +89,13 @@ async def microsoft_callback(
     if not stored_state or stored_state != state:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
 
+    redirect_uri = request.session.pop("microsoft_redirect_uri", None) or settings.MICROSOFT_REDIRECT_URI
+
     msal_app = _build_msal_app()
     result = msal_app.acquire_token_by_authorization_code(
         code,
         scopes=SCOPES,
-        redirect_uri=settings.MICROSOFT_REDIRECT_URI,
+        redirect_uri=redirect_uri,
     )
 
     if "error" in result:
@@ -88,16 +109,38 @@ async def microsoft_callback(
     id_token_claims = result.get("id_token_claims", {})
 
     email = id_token_claims.get("preferred_username") or id_token_claims.get("email", "")
+    if not email:
+        # Fallback to querying Microsoft Graph /me
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    "https://graph.microsoft.com/v1.0/me",
+                    headers={"Authorization": f"Bearer {access_token_ms}"}
+                )
+                if resp.status_code == 200:
+                    me_data = resp.json()
+                    email = me_data.get("mail") or me_data.get("userPrincipalName", "")
+        except Exception:
+            pass
+
     display_name = id_token_claims.get("name", email)
 
     if not email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not retrieve email from Microsoft")
 
-    # Upsert user
-    db_result = await db.execute(select(User).where(User.email == email))
-    user = db_result.scalar_one_or_none()
+    # Retrieve current user if we are linking an account
+    current_user_id = request.session.pop("current_user_id", None)
+    user = None
+    if current_user_id:
+        user_result = await db.execute(select(User).where(User.id == uuid.UUID(current_user_id)))
+        user = user_result.scalar_one_or_none()
 
     is_new_user = False
+    if not user:
+        # Standard flow or fallback: Find by email
+        db_result = await db.execute(select(User).where(User.email == email))
+        user = db_result.scalar_one_or_none()
+
     if not user:
         is_new_user = True
         tenant_id = uuid.uuid4()
@@ -160,7 +203,7 @@ async def microsoft_callback(
 
     # Register Outlook push notifications for this connected account.
     try:
-        webhook_url = str(request.base_url).rstrip("/") + "/api/webhooks/outlook"
+        webhook_url = get_external_base_url(request).rstrip("/") + "/api/webhooks/outlook"
         connector = OutlookConnector(account)
         subscription = await connector.create_subscription(webhook_url)
         account.outlook_subscription_id = subscription.get("id")

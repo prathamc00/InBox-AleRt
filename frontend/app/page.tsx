@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { 
+  BellRing,
   Mail, 
   Sparkles, 
   ChevronRight, 
@@ -23,7 +24,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 inset-x-0 h-20 z-50 flex items-center justify-between px-6 md:px-12 max-w-7xl mx-auto w-full backdrop-blur-md bg-void/50 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg" style={{background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 0 20px rgba(99,102,241,0.5)"}}>
-            <Mail className="w-4 h-4 text-white" strokeWidth={2.5} />
+            <BellRing className="w-4 h-4 text-white" strokeWidth={2.5} />
           </div>
           <span className="font-bold text-xl tracking-wide text-white">InboxAlert<span style={{color: "#818cf8"}}>.</span></span>
         </div>
@@ -223,7 +224,7 @@ export default function LandingPage() {
 
             <div className="glass-panel p-10 rounded-3xl premium-border hover:bg-surface-raised/50 transition-colors group">
               <Lock className="w-12 h-12 text-accent mb-6 group-hover:scale-110 transition-transform" />
-              <h3 className="text-2xl font-bold text-white mb-4">SaaS-Grade Privacy</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">Enterprise-Grade Privacy</h3>
               <p className="text-text-secondary leading-relaxed">
                 We use AES-256-GCM encryption for your OAuth tokens. Raw email bodies are processed in memory and immediately discarded. We only store the metadata and the AI summary.
               </p>
@@ -252,62 +253,7 @@ export default function LandingPage() {
       <section id="pricing" className="py-24 relative z-10 bg-surface/30 border-t border-white/5">
         <div className="max-w-5xl mx-auto px-6 md:px-12 text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Simple, Transparent Pricing</h2>
-          <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-16">Start for free. Upgrade when you need ultimate autonomy.</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-            {/* Free Tier */}
-            <div className="p-10 rounded-3xl border border-border-subtle bg-surface/50">
-              <h3 className="text-2xl font-semibold mb-2 text-white">Basic</h3>
-              <p className="text-5xl font-bold mb-6 text-white">$0<span className="text-lg font-normal text-text-secondary">/month</span></p>
-              <ul className="space-y-5 mb-10">
-                <li className="flex items-center gap-3 text-text-secondary">
-                  <CheckCircle2 className="w-5 h-5 text-text-tertiary" />
-                  50 incoming emails/day scanned
-                </li>
-                <li className="flex items-center gap-3 text-text-secondary">
-                  <CheckCircle2 className="w-5 h-5 text-text-tertiary" />
-                  WhatsApp instant alerts
-                </li>
-                <li className="flex items-center gap-3 text-text-secondary">
-                  <CheckCircle2 className="w-5 h-5 text-text-tertiary" />
-                  1 connected inbox
-                </li>
-              </ul>
-              <Link href="/login" className="block w-full py-4 text-center rounded-xl bg-surface-raised hover:bg-border-subtle text-white font-bold transition-colors">
-                Start Free
-              </Link>
-            </div>
-
-            {/* Pro Tier */}
-            <div className="relative p-10 rounded-3xl border border-brand-500/50 bg-brand-500/10 premium-border overflow-hidden transform md:-translate-y-4 shadow-[0_0_50px_rgba(99,102,241,0.15)]">
-              <div className="absolute top-0 right-0 bg-brand-500 text-white text-[10px] font-bold px-4 py-1.5 rounded-bl-xl uppercase tracking-widest">
-                Recommended
-              </div>
-              <h3 className="text-2xl font-semibold mb-2 text-brand-400">Elite</h3>
-              <p className="text-5xl font-bold mb-6 text-white">$29<span className="text-lg font-normal text-text-secondary">/month</span></p>
-              <ul className="space-y-5 mb-10">
-                <li className="flex items-center gap-3 text-white font-medium">
-                  <CheckCircle2 className="w-5 h-5 text-brand-400" />
-                  Unlimited email AI scanning
-                </li>
-                <li className="flex items-center gap-3 text-white font-medium">
-                  <CheckCircle2 className="w-5 h-5 text-brand-400" />
-                  Autonomous Smart-Replies
-                </li>
-                <li className="flex items-center gap-3 text-white font-medium">
-                  <CheckCircle2 className="w-5 h-5 text-brand-400" />
-                  Unlimited connected inboxes
-                </li>
-                <li className="flex items-center gap-3 text-white font-medium">
-                  <CheckCircle2 className="w-5 h-5 text-brand-400" />
-                  Priority WhatsApp routing
-                </li>
-              </ul>
-              <Link href="/login" className="block w-full py-4 text-center rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition-colors shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-                Get Elite
-              </Link>
-            </div>
-          </div>
+          <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-16">Coming soon.</p>
         </div>
       </section>
 
@@ -315,7 +261,7 @@ export default function LandingPage() {
       <footer className="border-t border-white/5 py-12 text-center relative z-10 bg-void">
         <div className="flex items-center justify-center gap-3 mb-6">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{background: "linear-gradient(135deg, #6366f1, #8b5cf6)"}}>
-            <Mail className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+            <BellRing className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
           </div>
           <span className="font-bold text-lg tracking-wide text-white">InboxAlert<span style={{color: "#818cf8"}}>.</span></span>
         </div>

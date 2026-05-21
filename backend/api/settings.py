@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.dependencies import get_current_user
 from db.session import get_db
 from models.user import User
-from whatsapp.notifier import notifier
+from whatsapp.meta_notifier import meta_notifier as notifier
 
 router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
@@ -148,27 +148,9 @@ async def send_whatsapp_test(
 async def get_whatsapp_deliveries(
     current_user: User = Depends(get_current_user),
 ):
-    """Return recent Twilio delivery statuses for the current user's WhatsApp number."""
+    """Return recent WhatsApp delivery statuses for the current user's WhatsApp number."""
     if not current_user.whatsapp_number:
         return WhatsAppDeliveriesOut(items=[])
 
-    ok, detail, items = notifier.list_recent_deliveries(current_user.whatsapp_number, limit=10)
-    if not ok:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Could not fetch WhatsApp delivery logs. {detail}",
-        )
-
-    normalized = [
-        {
-            "sid": item.get("sid"),
-            "to": item.get("to"),
-            "from_number": item.get("from"),
-            "status": item.get("status"),
-            "error_code": item.get("error_code"),
-            "error_message": item.get("error_message"),
-            "date_sent": item.get("date_sent"),
-        }
-        for item in items
-    ]
-    return WhatsAppDeliveriesOut(items=normalized)
+    # Meta API doesn't have a delivery list endpoint — return empty for now
+    return WhatsAppDeliveriesOut(items=[])

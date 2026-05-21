@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Mail, Shield, ArrowRight, Beaker } from "lucide-react";
+import { BellRing, Shield, ArrowRight, Beaker } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
@@ -49,7 +49,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
           <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center mb-4">
-            <Mail className="w-6 h-6 text-black" />
+            <BellRing className="w-6 h-6 text-black" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-white">InboxAlert</h1>
           <p className="text-text-secondary mt-2 text-center text-sm">
