@@ -63,15 +63,32 @@ async def process_whatsapp_message(from_number: str, message_text: str, button_i
             log.warning("WhatsApp message from unknown number", phone=phone)
             return
         
-        # Find most recent alerted email
-        email_result = await db.execute(
-            select(EmailRecord)
-            .where(EmailRecord.tenant_id == user.tenant_id)
-            .where(EmailRecord.status == "alerted")
-            .order_by(EmailRecord.created_at.desc())
-            .limit(1)
-        )
-        email = email_result.scalar_one_or_none()
+        # Check if button_id is a direct cancel action for a specific email ID
+        email = None
+        if button_id and button_id.startswith("cancel_reply_"):
+            try:
+                email_id_str = button_id.replace("cancel_reply_", "")
+                import uuid
+                email_id = uuid.UUID(email_id_str)
+                email_result = await db.execute(
+                    select(EmailRecord).where(EmailRecord.id == email_id)
+                )
+                email = email_result.scalar_one_or_none()
+                if email:
+                    log.info("Direct email lookup succeeded for cancel payload", email_id=email.id)
+            except Exception as e:
+                log.error("Failed to parse email ID from cancel payload", error=str(e), payload=button_id)
+        
+        if not email:
+            # Find most recent alerted email
+            email_result = await db.execute(
+                select(EmailRecord)
+                .where(EmailRecord.tenant_id == user.tenant_id)
+                .where(EmailRecord.status == "alerted")
+                .order_by(EmailRecord.created_at.desc())
+                .limit(1)
+            )
+            email = email_result.scalar_one_or_none()
         
         if not email:
             log.info("No actionable email found", user_id=user.id)
@@ -79,7 +96,15 @@ async def process_whatsapp_message(from_number: str, message_text: str, button_i
         
         # Handle button interactions
         if button_id:
-            if button_id.startswith("reply_1_"):
+            if button_id.startswith("cancel_reply_"):
+                email.status = "cancelled"
+                log.info("Auto-reply cancelled via button click", email_id=email.id)
+                from whatsapp.meta_notifier import meta_notifier
+                meta_notifier._send_text(
+                    to_number=user.whatsapp_number,
+                    text=f"Auto-reply to '{email.subject}' has been cancelled."
+                )
+            elif button_id.startswith("reply_1_"):
                 reply_text = "Thanks, received."
                 email.status = "manual_replied"
                 log.info("Quick reply 1 triggered", email_id=email.id)
@@ -111,7 +136,13 @@ async def process_whatsapp_message(from_number: str, message_text: str, button_i
                 
             elif text_lower.startswith("cancel"):
                 # Handle auto-reply cancellation
-                log.info("Cancel request received", email_id=email.id)
+                email.status = "cancelled"
+                log.info("Cancel request received via text", email_id=email.id)
+                from whatsapp.meta_notifier import meta_notifier
+                meta_notifier._send_text(
+                    to_number=user.whatsapp_number,
+                    text=f"Auto-reply to '{email.subject}' has been cancelled."
+                )
         
         await db.commit()
 
@@ -173,7 +204,18 @@ async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
                         text
                     )
                 
-                # Handle button replies
+                # Handle quick reply buttons from template messages (type: "button")
+                elif message_type == "button":
+                    button_data = message.get("button", {})
+                    button_payload = button_data.get("payload")
+                    background_tasks.add_task(
+                        process_whatsapp_message,
+                        from_number,
+                        None,
+                        button_payload
+                    )
+                
+                # Handle interactive buttons
                 elif message_type == "interactive":
                     button_reply = message.get("interactive", {}).get("button_reply", {})
                     button_id = button_reply.get("id")

@@ -117,6 +117,7 @@ class MetaNotifier:
         self,
         to_number: str,
         template_name: str,
+        components: list[dict[str, Any]] | None = None,
         language_code: str = "en_US",
     ) -> tuple[bool, str]:
         """Send a pre-approved Meta template message.
@@ -134,6 +135,8 @@ class MetaNotifier:
                 "language": {"code": language_code},
             },
         }
+        if components:
+            payload["template"]["components"] = components
         try:
             with httpx.Client(timeout=20.0) as client:
                 resp = client.post(
@@ -159,6 +162,72 @@ class MetaNotifier:
         except Exception as exc:
             log.exception("Failed Meta template send", error=str(exc))
             return False, str(exc)
+
+    def send_alert_template(
+        self,
+        to_number: str,
+        sender: str,
+        subject: str,
+        summary: str,
+        score: int,
+    ) -> tuple[bool, str]:
+        """Send a standard email alert template."""
+        components = [
+            {
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": str(score)},
+                    {"type": "text", "text": sender},
+                    {"type": "text", "text": subject},
+                    {"type": "text", "text": summary[:300]},
+                ]
+            }
+        ]
+        return self._send_meta_template(
+            to_number=to_number,
+            template_name="email_alerts",
+            components=components,
+        )
+
+    def send_auto_reply_template_alert(
+        self,
+        to_number: str,
+        sender: str,
+        subject: str,
+        reply_draft: str,
+        cancel_seconds: int,
+        email_record_id: str,
+        score: int,
+    ) -> tuple[bool, str]:
+        """Send an auto-reply notification with a cancel button."""
+        components = [
+            {
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": str(score)},
+                    {"type": "text", "text": sender},
+                    {"type": "text", "text": subject},
+                    {"type": "text", "text": reply_draft[:300]},
+                    {"type": "text", "text": str(cancel_seconds)},
+                ]
+            },
+            {
+                "type": "button",
+                "sub_type": "quick_reply",
+                "index": "0",
+                "parameters": [
+                    {
+                        "type": "payload",
+                        "payload": f"cancel_reply_{email_record_id}"
+                    }
+                ]
+            }
+        ]
+        return self._send_meta_template(
+            to_number=to_number,
+            template_name="auto_reply_alerts",
+            components=components,
+        )
 
     def _send_meta_text(self, to_number: str, text: str) -> tuple[bool, str]:
         """Send a free-form text message via Meta Cloud API.

@@ -99,52 +99,52 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
             importance_score=score,
             status=status,
             auto_replied=bool(reply_draft),
-            auto_reply_sent_at=datetime.now(timezone.utc) if reply_draft else None,
+            auto_reply_sent_at=None,
             auto_reply_content=reply_draft,
         )
         db.add(record)
         await db.flush() # get record.id
         
-        # Trigger WhatsApp Notification
-        if score >= 50 and user and user.whatsapp_number:
-            if reply_draft:
-                # Tell user we auto-replied
-                notifier.send_auto_reply_notification(
-                    to_number=user.whatsapp_number,
-                    sender=sender_email,
-                    summary=reply_draft[:300],
-                    thread_id=parsed["provider_thread_id"],
-                    subject=parsed["subject"],
-                    original_summary=summary,
-                )
-            else:
-                # Standard manual reply prompt
-                notifier.send_alert(
-                    to_number=user.whatsapp_number,
-                    sender=sender_email,
-                    subject=parsed["subject"],
-                    summary=summary,
-                    score=score,
-                    email_id=str(record.id)
-                )
-        
-        # If dry-run is OFF, send the reply via Gmail
+        # Check if dry-run is OFF and rule is enabled
+        should_auto_reply = False
+        cancel_seconds = 60
         if reply_draft:
             auto_reply_rule_result = await db.execute(
                 select(AutoReplyRule).where(AutoReplyRule.user_id == account.user_id)
             )
             auto_reply_rule = auto_reply_rule_result.scalar_one_or_none()
-            if auto_reply_rule and not auto_reply_rule.dry_run:
-                try:
-                    connector.send_reply(
-                        thread_id=parsed["provider_thread_id"],
-                        to=sender_email,
-                        subject=f"Re: {parsed['subject']}",
-                        body=reply_draft,
-                    )
-                    log.info("Auto-reply sent", message_id=message_id, to=sender_email)
-                except Exception as e:
-                    log.error("Failed to send auto-reply", error=str(e))
+            if auto_reply_rule and auto_reply_rule.is_enabled and not auto_reply_rule.dry_run:
+                should_auto_reply = True
+                cancel_seconds = auto_reply_rule.cancel_window_seconds
+
+        # Trigger WhatsApp Notification
+        if score >= 50 and user and user.whatsapp_number:
+            if should_auto_reply:
+                notifier.send_auto_reply_template_alert(
+                    to_number=user.whatsapp_number,
+                    sender=sender_email,
+                    subject=parsed["subject"],
+                    reply_draft=reply_draft,
+                    cancel_seconds=cancel_seconds,
+                    email_record_id=str(record.id),
+                    score=score,
+                )
+            else:
+                notifier.send_alert_template(
+                    to_number=user.whatsapp_number,
+                    sender=sender_email,
+                    subject=parsed["subject"],
+                    summary=summary or "",
+                    score=score,
+                )
+        
+        # Schedule the auto-reply instead of sending it immediately
+        if should_auto_reply:
+            send_delayed_auto_reply.apply_async(
+                args=[str(record.id)],
+                countdown=cancel_seconds
+            )
+            log.info("Scheduled delayed auto-reply task for Gmail", record_id=str(record.id), countdown=cancel_seconds)
         
         await db.commit()
         log.info("Email processed", score=score, message_id=message_id)
@@ -220,45 +220,52 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
             importance_score=score,
             status=status,
             auto_replied=bool(reply_draft),
-            auto_reply_sent_at=datetime.now(timezone.utc) if reply_draft else None,
+            auto_reply_sent_at=None,
             auto_reply_content=reply_draft,
         )
         db.add(record)
         await db.flush()
 
-        if score >= 50 and user and user.whatsapp_number:
-            if reply_draft:
-                notifier.send_auto_reply_notification(
-                    to_number=user.whatsapp_number,
-                    sender=sender_email,
-                    summary=reply_draft[:200] + "...",
-                    thread_id=parsed["provider_thread_id"],
-                )
-            else:
-                notifier.send_alert(
-                    to_number=user.whatsapp_number,
-                    sender=sender_email,
-                    subject=parsed["subject"],
-                    summary=summary,
-                    score=score,
-                    email_id=str(record.id),
-                )
-
-        # If dry-run is OFF, send the reply via Outlook
+        # Check if dry-run is OFF and rule is enabled
+        should_auto_reply = False
+        cancel_seconds = 60
         if reply_draft:
             auto_reply_rule_result = await db.execute(
                 select(AutoReplyRule).where(AutoReplyRule.user_id == account.user_id)
             )
             auto_reply_rule = auto_reply_rule_result.scalar_one_or_none()
-            if auto_reply_rule and not auto_reply_rule.dry_run:
-                try:
-                    await connector.send_reply(
-                        message_id=parsed["provider_message_id"],
-                        body=reply_draft,
-                    )
-                    log.info("Auto-reply sent via Outlook", message_id=message_id, to=sender_email)
-                except Exception as e:
-                    log.error("Failed to send Outlook auto-reply", error=str(e))
+            if auto_reply_rule and auto_reply_rule.is_enabled and not auto_reply_rule.dry_run:
+                should_auto_reply = True
+                cancel_seconds = auto_reply_rule.cancel_window_seconds
+
+        # Trigger WhatsApp Notification
+        if score >= 50 and user and user.whatsapp_number:
+            if should_auto_reply:
+                notifier.send_auto_reply_template_alert(
+                    to_number=user.whatsapp_number,
+                    sender=sender_email,
+                    subject=parsed["subject"],
+                    reply_draft=reply_draft,
+                    cancel_seconds=cancel_seconds,
+                    email_record_id=str(record.id),
+                    score=score,
+                )
+            else:
+                notifier.send_alert_template(
+                    to_number=user.whatsapp_number,
+                    sender=sender_email,
+                    subject=parsed["subject"],
+                    summary=summary or "",
+                    score=score,
+                )
+
+        # Schedule the auto-reply instead of sending it immediately
+        if should_auto_reply:
+            send_delayed_auto_reply.apply_async(
+                args=[str(record.id)],
+                countdown=cancel_seconds
+            )
+            log.info("Scheduled delayed auto-reply task for Outlook", record_id=str(record.id), countdown=cancel_seconds)
 
         await db.commit()
         log.info("Outlook email processed", score=score, message_id=message_id)
@@ -276,3 +283,69 @@ def process_gmail_webhook(account_id: str, message_id: str):
 def process_outlook_webhook(account_id: str, message_id: str):
     """Celery task wrapper for Outlook webhook processing."""
     asyncio.run(_process_outlook_webhook_async(account_id, message_id))
+
+
+@celery_app.task(name="send_delayed_auto_reply")
+def send_delayed_auto_reply(record_id: str):
+    """
+    Celery task that runs after cancel_window_seconds.
+    Checks if the email record was cancelled; if not, sends the reply.
+    """
+    asyncio.run(_send_delayed_auto_reply_async(record_id))
+
+
+async def _send_delayed_auto_reply_async(record_id: str):
+    import uuid
+    async with AsyncSessionLocal() as db:
+        record = await db.get(EmailRecord, uuid.UUID(record_id))
+        if not record:
+            log.error("Email record not found for delayed auto-reply", record_id=record_id)
+            return
+
+        if record.status == "cancelled":
+            log.info("Delayed auto-reply cancelled by user, skipping send", record_id=record_id)
+            return
+
+        account = await db.get(ConnectedAccount, record.account_id)
+        if not account:
+            log.error("Account not found for auto-reply", account_id=record.account_id)
+            return
+
+        user = await db.get(User, account.user_id)
+        if not user:
+            log.error("User not found for auto-reply", user_id=account.user_id)
+            return
+
+        # Double check that the rule is still enabled and dry_run is still False
+        from models.auto_reply import AutoReplyRule
+        rule_result = await db.execute(
+            select(AutoReplyRule).where(AutoReplyRule.user_id == user.id)
+        )
+        rule = rule_result.scalar_one_or_none()
+        if not rule or not rule.is_enabled or rule.dry_run:
+            log.info("Auto-reply rule disabled or in dry-run, skipping send", record_id=record_id)
+            return
+
+        try:
+            if account.provider == "gmail":
+                connector = GmailConnector(account)
+                connector.send_reply(
+                    thread_id=record.provider_thread_id,
+                    to=record.sender_email,
+                    subject=f"Re: {record.subject}",
+                    body=record.auto_reply_content,
+                )
+                log.info("Delayed auto-reply sent via Gmail", record_id=record_id)
+            elif account.provider == "outlook":
+                connector = OutlookConnector(account)
+                await connector.send_reply(
+                    message_id=record.provider_message_id,
+                    body=record.auto_reply_content,
+                )
+                log.info("Delayed auto-reply sent via Outlook", record_id=record_id)
+
+            record.status = "auto_replied"
+            record.auto_reply_sent_at = datetime.now(timezone.utc)
+            await db.commit()
+        except Exception as e:
+            log.error("Failed to send delayed auto-reply", record_id=record_id, error=str(e))
