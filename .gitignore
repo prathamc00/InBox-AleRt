@@ -35,6 +35,9 @@ coverage/
 
 # Sensitive / secret files
 *.json
+!package.json
+!package-lock.json
+!tsconfig.json
 
 report.md
 start_celery.bat
