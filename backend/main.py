@@ -130,17 +130,13 @@ async def add_security_headers(request: Request, call_next):
 # ── Global Exception Handler ──────────────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    log.error("Unhandled exception", path=request.url.path, error=str(exc))
-    # Never leak stack traces to the frontend in production.
-    if settings.DEBUG:
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": str(exc)},
-        )
-
+    import traceback
+    tb = traceback.format_exc()
+    log.error("Unhandled exception", path=request.url.path, error=str(exc), traceback=tb)
+    # TEMPORARY: always expose error so we can diagnose production issues
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An internal error occurred. Please try again."},
+        content={"detail": str(exc), "type": type(exc).__name__},
     )
 
 
