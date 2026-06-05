@@ -242,7 +242,7 @@ export default function LandingPage() {
               <MessageCircle className="w-12 h-12 text-[#25D366] mb-6 group-hover:scale-110 transition-transform" />
               <h3 className="text-2xl font-bold text-white mb-4">Interactive WhatsApp Control</h3>
               <p className="text-text-secondary leading-relaxed">
-                Don't just read alerts—act on them. Our Twilio integration allows you to reply with numbers to trigger manual actions like "Snooze" or "Send standard acknowledgement" without opening your email app.
+                Don't just read alerts—act on them. Our WhatsApp integration allows you to reply with numbers to trigger manual actions like "Snooze" or "Send standard acknowledgement" without opening your email app.
               </p>
             </div>
           </div>

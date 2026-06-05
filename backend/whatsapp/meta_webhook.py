@@ -21,12 +21,15 @@ def verify_webhook_signature(payload: bytes, signature: str) -> bool:
     Verify that the webhook request came from Meta.
     Signature is in format: sha256=<hash>
     """
-    if not settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN:
-        log.warning("WhatsApp webhook verification disabled")
+    # Meta signs payloads with app secret, not webhook verify token.
+    # Keep a fallback to verify token for backward compatibility.
+    secret = settings.WHATSAPP_APP_SECRET or settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+    if not secret:
+        log.warning("WhatsApp webhook signature verification disabled")
         return True
     
     expected_signature = hmac.new(
-        settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN.encode(),
+        secret.encode(),
         payload,
         hashlib.sha256
     ).hexdigest()

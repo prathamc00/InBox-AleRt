@@ -41,10 +41,7 @@ class Settings(BaseSettings):
     MICROSOFT_TENANT_ID: str = "common"
     MICROSOFT_REDIRECT_URI: str = "http://localhost:8000/auth/microsoft/callback"
 
-    # ── Twilio ─────────────────────────────────────────────────
-    TWILIO_ACCOUNT_SID: str = ""
-    TWILIO_AUTH_TOKEN: str = ""
-    TWILIO_WHATSAPP_FROM: str = ""
+
 
     # ── AI ─────────────────────────────────────────────────────
     GEMINI_API_KEY: str = ""
@@ -61,6 +58,7 @@ class Settings(BaseSettings):
     WHATSAPP_PHONE_NUMBER_ID: str = ""
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = ""
+    WHATSAPP_APP_SECRET: str = ""
 
     @field_validator("DEBUG", mode="before")
     @classmethod

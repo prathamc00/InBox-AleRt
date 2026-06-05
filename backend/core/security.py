@@ -11,6 +11,7 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -33,11 +34,16 @@ def encrypt_token(plaintext: str) -> str:
 
 def decrypt_token(encrypted: str) -> str:
     """Decrypt an AES-256-GCM encrypted token. Raises ValueError on tamper."""
-    key = bytes.fromhex(settings.TOKEN_ENCRYPTION_KEY)
-    aesgcm = AESGCM(key)
-    raw = base64.urlsafe_b64decode(encrypted)
-    nonce, ciphertext = raw[:12], raw[12:]
-    return aesgcm.decrypt(nonce, ciphertext, None).decode("utf-8")
+    try:
+        key = bytes.fromhex(settings.TOKEN_ENCRYPTION_KEY)
+        aesgcm = AESGCM(key)
+        raw = base64.urlsafe_b64decode(encrypted)
+        nonce, ciphertext = raw[:12], raw[12:]
+        return aesgcm.decrypt(nonce, ciphertext, None).decode("utf-8")
+    except InvalidTag as e:
+        raise ValueError(
+            "Failed to decrypt token: Invalid tag (possibly encrypted with a different TOKEN_ENCRYPTION_KEY or tampered)"
+        ) from e
 
 
 # ── JWT (RS256) ───────────────────────────────────────────────────────────────

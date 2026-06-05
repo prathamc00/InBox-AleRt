@@ -1,284 +1,202 @@
+"""WhatsApp notifier using Meta Cloud API.
+
+Key rules:
+- Test messages use Meta's built-in `hello_world` template so they always
+  deliver even when there is no open 24-hour conversation window.
+- Real alert messages use free-form text, which is valid once the user has
+  interacted with the business number (i.e. the 24-hour window is open).
 """
-WhatsApp Business API integration using Meta Cloud API.
-Docs: https://developers.facebook.com/docs/whatsapp/cloud-api
-"""
+
+from __future__ import annotations
+
+import json
+import os
+from typing import Any
+
 import httpx
 import structlog
+
 from core.config import settings
 
 log = structlog.get_logger()
 
+_META_API_VERSION = "v21.0"
 
-class MetaWhatsAppNotifier:
-    """
-    WhatsApp Business Cloud API client.
-    Supports text messages, templates, interactive buttons, and media.
-    """
-    
-    def __init__(self):
-        self.access_token = settings.WHATSAPP_ACCESS_TOKEN
-        self.phone_number_id = settings.WHATSAPP_PHONE_NUMBER_ID
-        self.business_account_id = settings.WHATSAPP_BUSINESS_ACCOUNT_ID
-        self.base_url = f"https://graph.facebook.com/v21.0/{self.phone_number_id}/messages"
-    
-    def _send_request(self, payload: dict) -> tuple[bool, str, dict]:
-        """Send message via WhatsApp Cloud API."""
-        if not self.access_token or not self.phone_number_id:
-            log.warning("WhatsApp credentials missing")
-            return False, "WhatsApp credentials are missing", {}
-        
-        headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json",
-        }
-        
-        try:
-            response = httpx.post(
-                self.base_url,
-                json=payload,
-                headers=headers,
-                timeout=15.0
+
+class MetaNotifier:
+    def __init__(self) -> None:
+        self.meta_token = settings.WHATSAPP_ACCESS_TOKEN.strip()
+        self.meta_phone_id = settings.WHATSAPP_PHONE_NUMBER_ID.strip()
+
+    def send_test_message_result(self, to_number: str) -> tuple[bool, str]:
+        """Send a test message.
+
+        Uses the Meta `hello_world` template so it works even without an open
+        24-hour conversation window (i.e. the user doesn't need to message first).
+        """
+        if self._meta_ready():
+            log.info("WhatsApp test: sending hello_world template", provider="meta")
+            return self._send_meta_template(
+                to_number=to_number,
+                template_name="hello_world",
+                language_code="en_US",
             )
-            
-            data = response.json()
-            
-            if response.status_code >= 400:
-                error_msg = data.get("error", {}).get("message", "Unknown error")
-                error_code = data.get("error", {}).get("code", response.status_code)
-                log.error(
-                    "WhatsApp API error",
-                    status=response.status_code,
-                    code=error_code,
-                    message=error_msg
-                )
-                return False, f"Error {error_code}: {error_msg}", data
-            
-            message_id = data.get("messages", [{}])[0].get("id")
-            log.info("WhatsApp message sent", message_id=message_id)
-            return True, "Message sent", data
-            
-        except Exception as exc:
-            log.error("Failed to send WhatsApp message", error=str(exc))
-            return False, str(exc), {}
-    
-    def send_text_message(self, to_number: str, body: str) -> bool:
-        """Send a simple text message."""
-        # Remove any prefixes and ensure E.164 format
-        to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
-        
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to_number,
-            "type": "text",
-            "text": {"body": body}
+        return False, "No WhatsApp provider is configured. Set Meta credentials."
+
+    def diagnostics(self) -> dict[str, Any]:
+        provider = "none"
+        if self._meta_ready():
+            provider = "meta"
+        return {
+            "provider": provider,
+            "meta_configured": self._meta_ready(),
+            "meta_phone_number_id_present": bool(self.meta_phone_id),
+            "meta_access_token_present": bool(self.meta_token),
         }
-        
-        ok, _, _ = self._send_request(payload)
-        return ok
-    
-    def send_alert_with_buttons(
+
+    def send_alert(
         self,
         to_number: str,
         sender: str,
         subject: str,
         summary: str,
         score: int,
-        email_id: str
-    ) -> bool:
-        """
-        Send an interactive alert with quick reply buttons.
-        Uses WhatsApp's interactive message format.
-        """
-        to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
-        
-        body_text = (
-            f"🚨 *Important Email Alert (Score: {score})*\n\n"
-            f"👤 *From:* {sender}\n"
-            f"📌 *Subject:* {subject}\n\n"
-            f"📝 *AI Summary:*\n{summary}"
+        email_id: str,
+    ) -> tuple[bool, str]:
+        msg = (
+            f"InboxAlert: Important email (score {score})\n"
+            f"From: {sender}\n"
+            f"Subject: {subject}\n"
+            f"Summary: {summary}\n"
+            f"Email ID: {email_id}"
         )
-        
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to_number,
-            "type": "interactive",
-            "interactive": {
-                "type": "button",
-                "body": {"text": body_text[:1024]},  # Max 1024 chars
-                "action": {
-                    "buttons": [
-                        {
-                            "type": "reply",
-                            "reply": {
-                                "id": f"reply_1_{email_id}",
-                                "title": "Thanks, received"
-                            }
-                        },
-                        {
-                            "type": "reply",
-                            "reply": {
-                                "id": f"reply_2_{email_id}",
-                                "title": "Will review today"
-                            }
-                        },
-                        {
-                            "type": "reply",
-                            "reply": {
-                                "id": f"snooze_{email_id}",
-                                "title": "Snooze"
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-        
-        ok, _, _ = self._send_request(payload)
-        return ok
-    
+        return self._send_text(to_number=to_number, text=msg)
+
     def send_auto_reply_notification(
         self,
         to_number: str,
         sender: str,
         summary: str,
         thread_id: str,
-        subject: str = "",
-        original_summary: str = ""
-    ) -> bool:
-        """
-        Notify user that AI auto-replied to an email.
-        Tries to send detailed free-form text first (requires active 24-hour window).
-        If that fails, falls back to the pre-approved hello_world template to ensure delivery.
-        """
-        to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
-        
-        body_text = (
-            f"🤖 *AI Auto-Replied*\n\n"
-            f"👤 *From:* {sender}\n"
-            f"📌 *Subject:* {subject}\n\n"
-            f"📝 *Original:*\n{original_summary[:200]}\n\n"
-            f"💬 *My Reply:*\n{summary[:200]}\n\n"
-            f"Reply CANCEL within 60s to undo."
-        )
-        
-        ok = self.send_text_message(to_number, body_text)
-        if ok:
-            return True
-            
-        log.info("Auto-reply custom text message failed, falling back to template")
-        ok, _, _ = self._send_request({
-            "messaging_product": "whatsapp",
-            "to": to_number,
-            "type": "template",
-            "template": {"name": "hello_world", "language": {"code": "en"}}
-        })
-        return ok
-    
-    def send_template_message(
+        subject: str | None = None,
+        original_summary: str | None = None,
+    ) -> tuple[bool, str]:
+        parts = [
+            "InboxAlert: Auto-reply sent",
+            f"From: {sender}",
+        ]
+        if subject:
+            parts.append(f"Subject: {subject}")
+        if original_summary:
+            parts.append(f"Original summary: {original_summary}")
+        parts.append(f"Reply: {summary}")
+        parts.append(f"Thread ID: {thread_id}")
+        return self._send_text(to_number=to_number, text="\n".join(parts))
+
+    # ── Internal routing ───────────────────────────────────────────────────────
+
+    def _send_text(self, to_number: str, text: str) -> tuple[bool, str]:
+        """Send a free-form text message (requires an open 24-h window)."""
+        if self._meta_ready():
+            log.info("WhatsApp send provider selected", provider="meta")
+            return self._send_meta_text(to_number=to_number, text=text)
+        return False, "No WhatsApp provider is configured. Set Meta credentials."
+
+    def _meta_ready(self) -> bool:
+        return bool(self.meta_token and self.meta_phone_id)
+
+    # ── Meta Cloud API ─────────────────────────────────────────────────────────
+
+    def _meta_headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.meta_token}",
+            "Content-Type": "application/json",
+        }
+
+    def _send_meta_template(
         self,
         to_number: str,
         template_name: str,
-        language_code: str = "en",
-        parameters: list[str] = None
-    ) -> bool:
+        language_code: str = "en_US",
+    ) -> tuple[bool, str]:
+        """Send a pre-approved Meta template message.
+
+        Templates work without an open conversation window — they are the
+        correct approach for business-initiated contacts.
         """
-        Send a pre-approved message template.
-        Templates must be created and approved in Meta Business Manager.
-        """
-        to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
-        
-        components = []
-        if parameters:
-            components.append({
-                "type": "body",
-                "parameters": [{"type": "text", "text": p} for p in parameters]
-            })
-        
+        url = f"https://graph.facebook.com/{_META_API_VERSION}/{self.meta_phone_id}/messages"
         payload = {
             "messaging_product": "whatsapp",
-            "to": to_number,
+            "to": to_number.lstrip("+"),
             "type": "template",
             "template": {
                 "name": template_name,
                 "language": {"code": language_code},
-                "components": components
-            }
+            },
         }
-        
-        ok, _, _ = self._send_request(payload)
-        return ok
-    
-    def send_test_message(self, to_number: str) -> bool:
-        """Send a test message using hello_world template."""
-        return self.send_template_message(to_number, "hello_world", "en")
+        try:
+            with httpx.Client(timeout=20.0) as client:
+                resp = client.post(
+                    url,
+                    headers=self._meta_headers(),
+                    content=json.dumps(payload),
+                )
+            data: dict[str, Any] = {}
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"raw": resp.text}
 
-    def send_test_message_result(self, to_number: str) -> tuple[bool, str]:
-        """Send test message and return detailed result."""
-        to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
-        ok, msg, _ = self._send_request({
-            "messaging_product": "whatsapp",
-            "to": to_number,
-            "type": "template",
-            "template": {"name": "hello_world", "language": {"code": "en"}}
-        })
-        return ok, msg
+            log.info("Meta template send response", status=resp.status_code, body=data)
 
-    def send_alert(self, to_number: str, sender: str, subject: str, summary: str, score: int, email_id: str) -> bool:
+            if 200 <= resp.status_code < 300:
+                return True, "sent"
+
+            err = data.get("error", {})
+            message = err.get("message") or data.get("raw") or "Unknown Meta error"
+            code = err.get("code")
+            return False, f"Meta HTTP {resp.status_code} Error ({code}): {message}"
+        except Exception as exc:
+            log.exception("Failed Meta template send", error=str(exc))
+            return False, str(exc)
+
+    def _send_meta_text(self, to_number: str, text: str) -> tuple[bool, str]:
+        """Send a free-form text message via Meta Cloud API.
+
+        Only works inside a 24-hour conversation window (user must have messaged first).
         """
-        Send alert.
-        Tries to send an interactive alert with buttons first (requires active 24-hour window).
-        If that fails, falls back to the pre-approved hello_world template to guarantee delivery.
-        """
-        to_number = to_number.replace("whatsapp:", "").replace("+", "").strip()
-        
-        # Try sending the interactive alert first
-        ok = self.send_alert_with_buttons(
-            to_number=to_number,
-            sender=sender,
-            subject=subject,
-            summary=summary,
-            score=score,
-            email_id=email_id
-        )
-        if ok:
-            return True
-            
-        # Fallback to the hello_world template if interactive fails (e.g., outside 24h window)
-        log.info("Interactive alert failed, falling back to template message")
-        ok, _, _ = self._send_request({
-            "messaging_product": "whatsapp",
-            "to": to_number,
-            "type": "template",
-            "template": {"name": "hello_world", "language": {"code": "en"}}
-        })
-        return ok
-    
-    def mark_message_as_read(self, message_id: str) -> bool:
-        """Mark an incoming message as read."""
-        if not self.access_token or not self.phone_number_id:
-            return False
-        
-        url = f"https://graph.facebook.com/v21.0/{self.phone_number_id}/messages"
-        headers = {
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json",
-        }
-        
+        url = f"https://graph.facebook.com/{_META_API_VERSION}/{self.meta_phone_id}/messages"
         payload = {
             "messaging_product": "whatsapp",
-            "status": "read",
-            "message_id": message_id
+            "to": to_number.lstrip("+"),
+            "type": "text",
+            "text": {"body": text},
         }
-        
         try:
-            response = httpx.post(url, json=payload, headers=headers, timeout=10.0)
-            return response.status_code < 400
+            with httpx.Client(timeout=20.0) as client:
+                resp = client.post(
+                    url,
+                    headers=self._meta_headers(),
+                    content=json.dumps(payload),
+                )
+            data: dict[str, Any] = {}
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"raw": resp.text}
+
+            log.info("Meta text send response", status=resp.status_code, body=data)
+
+            if 200 <= resp.status_code < 300:
+                return True, "sent"
+
+            err = data.get("error", {})
+            message = err.get("message") or data.get("raw") or "Unknown Meta error"
+            code = err.get("code")
+            return False, f"Meta HTTP {resp.status_code} Error ({code}): {message}"
         except Exception as exc:
-            log.error("Failed to mark message as read", error=str(exc))
-            return False
+            log.exception("Failed Meta text send", error=str(exc))
+            return False, str(exc)
 
 
-# Singleton instance
-meta_notifier = MetaWhatsAppNotifier()
+meta_notifier = MetaNotifier()

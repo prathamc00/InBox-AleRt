@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Use same-origin proxy by default to avoid browser CORS/mixed-content/network issues.
+// Set NEXT_PUBLIC_API_URL only when you explicitly want direct browser-to-backend calls.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/backend";
+const FALLBACK_LOCAL_API_URL = "http://localhost:8000";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -22,6 +25,17 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
+
+    // If proxy-based request fails at network layer, retry once directly to local backend.
+    if (!error.response && original && !original._networkRetry) {
+      original._networkRetry = true;
+      const currentBase = original.baseURL ?? API_URL;
+      if (currentBase === "/backend") {
+        original.baseURL = FALLBACK_LOCAL_API_URL;
+        return api(original);
+      }
+    }
+
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
@@ -69,4 +83,3 @@ export interface AutoReplyConfig {
   business_hours_end: string;
   timezone: string;
 }
-

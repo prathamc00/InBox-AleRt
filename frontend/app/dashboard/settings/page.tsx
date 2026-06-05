@@ -198,10 +198,35 @@ export default function SettingsPage() {
       setTimeout(() => setWaTestState("idle"), 3000);
     } catch (err: unknown) {
       setWaTestState("error");
-      const msg =
-        typeof err === "object" && err !== null && "response" in err
-          ? ((err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? "Failed to send test message")
-          : "Failed to send test message";
+      const msg = (() => {
+        if (typeof err === "object" && err !== null) {
+          // Axios error with a real HTTP response from backend
+          if ("response" in err) {
+            const e = err as { response?: { status?: number; data?: { detail?: string } }; message?: string };
+            const detail = e.response?.data?.detail;
+            const status = e.response?.status;
+            if (detail) return detail;
+            if (status === 502) return "WhatsApp provider not configured. Check your backend .env for WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID credentials.";
+            if (status) return `Server error (HTTP ${status}). Check backend logs.`;
+          }
+          // Network-level failure: backend not reachable at all
+          if ("code" in err) {
+            const code = (err as { code?: string }).code;
+            if (code === "ERR_NETWORK" || code === "ECONNREFUSED") {
+              return "Cannot reach the backend server. Make sure the backend is running on port 8000.";
+            }
+          }
+          if ("message" in err) {
+            const rawMsg = (err as { message?: string }).message ?? "";
+            if (rawMsg.toLowerCase().includes("network")) {
+              return "Cannot reach the backend server. Make sure the backend is running on port 8000.";
+            }
+            return rawMsg || "Failed to send test message";
+          }
+        }
+        if (err instanceof Error) return err.message;
+        return "Failed to send test message";
+      })();
       setWaTestMsg(msg);
     }
   }, [fetchDeliveries, whatsappNumber]);

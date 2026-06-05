@@ -129,7 +129,14 @@ async def send_whatsapp_test(
             detail="Add your WhatsApp number in settings first.",
         )
 
-    ok, detail = notifier.send_test_message_result(current_user.whatsapp_number)
+    try:
+        ok, detail = notifier.send_test_message_result(current_user.whatsapp_number)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"WhatsApp provider error: {exc}",
+        ) from exc
+
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -142,6 +149,18 @@ async def send_whatsapp_test(
         await db.commit()
 
     return {"ok": True, "detail": "Test message sent to WhatsApp."}
+
+
+@router.get("/whatsapp/diagnostics")
+async def get_whatsapp_diagnostics(
+    current_user: User = Depends(get_current_user),
+):
+    """Return non-secret provider diagnostics for WhatsApp sends."""
+    return {
+        "configured_number": current_user.whatsapp_number,
+        "is_verified": current_user.whatsapp_verified,
+        "provider": notifier.diagnostics(),
+    }
 
 
 @router.get("/whatsapp/deliveries", response_model=WhatsAppDeliveriesOut)

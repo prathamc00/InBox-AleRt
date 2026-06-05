@@ -19,7 +19,6 @@ from auth.microsoft import router as microsoft_router
 from api.webhooks import router as webhooks_router
 from api.auth import router as auth_router
 from api.emails import router as emails_router
-from whatsapp.reply_handler import router as whatsapp_router
 from whatsapp.meta_webhook import router as whatsapp_meta_router
 from core.config import settings
 
@@ -105,9 +104,10 @@ ALLOWED_ORIGINS = (
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$" if settings.DEBUG else None,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -149,7 +149,6 @@ app.include_router(google_router)
 app.include_router(microsoft_router)
 app.include_router(webhooks_router)
 app.include_router(emails_router)
-app.include_router(whatsapp_router)
 app.include_router(whatsapp_meta_router)
 from api.billing import router as billing_router
 app.include_router(billing_router)

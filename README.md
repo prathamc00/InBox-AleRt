@@ -89,7 +89,7 @@ InboxAlert acts as your **AI executive assistant**:
                      │
                      ↓ YES
 ┌─────────────────────────────────────────────────────────────┐
-│              WhatsApp (Twilio / Meta)                       │
+│              WhatsApp  (Meta)                       │
 │  🚨 Important Email Alert (Score: 94)                       │
 │                                                             │
 │  👤 From: client@company.com                                │
@@ -117,7 +117,7 @@ InboxAlert acts as your **AI executive assistant**:
 | **AI Engine** | Google Gemini 2.5 Flash | Email scoring + auto-reply |
 | **Email (Gmail)** | Google Cloud Pub/Sub | Real-time push notifications |
 | **Email (Outlook)** | Microsoft Graph API | Real-time push notifications |
-| **WhatsApp** | Twilio / Meta Business API | Alert delivery |
+| **WhatsApp** | Meta Business API | Alert delivery |
 | **Auth** | OAuth 2.0 (Google + Microsoft) | Secure authentication |
 | **Deployment** | Docker + Docker Compose | Containerization |
 
@@ -132,7 +132,7 @@ InboxAlert acts as your **AI executive assistant**:
 - Docker & Docker Compose
 - Google Cloud account (for Gmail + Gemini)
 - Microsoft Azure account (for Outlook)
-- Twilio or Meta Business account (for WhatsApp)
+- Meta Business account (for WhatsApp)
 
 ### 1. Clone the repository
 
@@ -251,12 +251,7 @@ MICROSOFT_REDIRECT_URI=http://localhost:8000/auth/microsoft/callback
 # AI
 GEMINI_API_KEY=your_gemini_api_key
 
-# WhatsApp (Twilio)
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
-
-# WhatsApp (Meta Business API - optional)
+# WhatsApp (Meta Business API)
 WHATSAPP_ACCESS_TOKEN=your_access_token
 WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
 WHATSAPP_BUSINESS_ACCOUNT_ID=your_business_account_id
@@ -388,12 +383,11 @@ if final_score >= 80:
 | Service | Cost | Notes |
 |---------|------|-------|
 | **Gemini AI** | ~$3/month | $0.0001 per email (rule engine skips ~40%) |
-| **WhatsApp (Twilio)** | ~$5/month | $0.005 per message (only high-priority) |
-| **WhatsApp (Meta)** | ~$1.50/month | $0.005-0.03 per conversation (cheaper) |
+| **WhatsApp (Meta)** | ~$1.50/month | $0.005-0.03 per conversation |
 | **Google Cloud** | ~$10/month | Pub/Sub + Cloud Run (small instance) |
 | **Database** | ~$7/month | Cloud SQL (db-f1-micro) |
 | **Redis** | ~$5/month | Cloud Memorystore (1GB) |
-| **Total** | **~$30/month** | For 1000 emails/day, ~200 alerts/month |
+| **Total** | **~$26.50/month** | For 1000 emails/day, ~200 alerts/month |
 
 ---
 
@@ -433,7 +427,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
 - [Next.js](https://nextjs.org/) - React framework
 - [Google Gemini](https://ai.google.dev/) - AI scoring engine
-- [Twilio](https://www.twilio.com/) - WhatsApp API
 - [Celery](https://docs.celeryq.dev/) - Distributed task queue
 
 ---
