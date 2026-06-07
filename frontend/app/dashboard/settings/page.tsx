@@ -41,7 +41,7 @@ function Section({
           {description && <p className="text-sm text-text-secondary mt-1 max-w-2xl">{description}</p>}
         </div>
       </div>
-      <div className="pl-12 space-y-6">{children}</div>
+      <div className="pl-0 sm:pl-12 space-y-6">{children}</div>
     </div>
   );
 }
@@ -70,9 +70,9 @@ function EmailList({
           <p className="text-xs text-text-tertiary italic">No entries yet.</p>
         )}
         {items.map((item) => (
-          <div key={item} className="flex items-center justify-between p-2.5 rounded-lg border border-border-subtle bg-surface-raised text-sm">
-            <span className="text-text-primary">{item}</span>
-            <button onClick={() => onRemove(item)} className="text-text-tertiary hover:text-alert transition-colors">✕</button>
+          <div key={item} className="flex items-center justify-between p-2.5 rounded-lg border border-border-subtle bg-surface-raised text-sm min-w-0">
+            <span className="text-text-primary truncate mr-2 flex-1" title={item}>{item}</span>
+            <button onClick={() => onRemove(item)} className="text-text-tertiary hover:text-alert transition-colors shrink-0">✕</button>
           </div>
         ))}
       </div>
@@ -259,7 +259,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full bg-void">
       {/* Header */}
-      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
+      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
         <h1 className="text-lg font-semibold tracking-tight text-text-primary">Settings</h1>
         <div className="flex items-center gap-3">
           {saveState === "error" && (
@@ -273,15 +273,15 @@ export default function SettingsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className={cn("w-full max-w-5xl p-8 pt-6 transition-opacity", loading && "opacity-40 pointer-events-none")}>
+        <div className={cn("w-full max-w-5xl p-4 md:p-8 pt-6 transition-opacity", loading && "opacity-40 pointer-events-none")}>
 
           {/* Profile */}
           <Section title="Profile Information" icon={UserRound}>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               <div className="w-16 h-16 rounded-full bg-surface-raised border border-border-strong flex items-center justify-center text-lg font-medium text-text-secondary shrink-0">
                 {user?.display_name?.[0]?.toUpperCase() ?? "U"}
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-4">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">Full Name</label>
                   <input type="text" defaultValue={user?.display_name ?? "User"}
@@ -311,24 +311,24 @@ export default function SettingsPage() {
                 />
               </div>
               <p className="text-xs text-text-tertiary mt-2">Include country code. E.g. +91 98765 43210</p>
-              <div className="mt-3 flex items-center gap-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
                   onClick={handleTestWhatsApp}
                   disabled={waTestState === "sending"}
-                  className="px-3 py-1.5 rounded-lg bg-surface-raised border border-border-subtle text-sm text-text-primary hover:bg-surface transition-colors disabled:opacity-60"
+                  className="px-3 py-1.5 rounded-lg bg-surface-raised border border-border-subtle text-sm text-text-primary hover:bg-surface transition-colors disabled:opacity-60 shrink-0"
                 >
                   {waTestState === "sending" ? "Sending..." : "Send Test Message"}
                 </button>
                 <button
                   onClick={fetchDeliveries}
                   disabled={waDeliveriesLoading}
-                  className="px-3 py-1.5 rounded-lg bg-void border border-border-subtle text-xs text-text-secondary hover:text-text-primary transition-colors disabled:opacity-60"
+                  className="px-3 py-1.5 rounded-lg bg-void border border-border-subtle text-xs text-text-secondary hover:text-text-primary transition-colors disabled:opacity-60 shrink-0"
                 >
                   {waDeliveriesLoading ? "Refreshing..." : "Refresh Logs"}
                 </button>
                 {waTestMsg && (
                   <span className={cn(
-                    "text-xs",
+                    "text-xs break-words max-w-full",
                     waTestState === "error" ? "text-alert" : "text-success"
                   )}>
                     {waTestMsg}

@@ -50,7 +50,7 @@ function Section({
           {description && <p className="text-sm text-text-secondary mt-1 max-w-2xl">{description}</p>}
         </div>
       </div>
-      <div className="pl-12 space-y-6">{children}</div>
+      <div className="pl-0 sm:pl-12 space-y-6">{children}</div>
     </div>
   );
 }
@@ -112,17 +112,17 @@ export default function AutoReplyPage() {
   // ── Save button ──────────────────────────────────────────────────────────────
   const SaveButton = () => {
     if (saveState === "saving") return (
-      <button disabled className="px-6 py-2.5 rounded-lg bg-white/60 text-black text-sm font-bold flex items-center gap-2 opacity-70">
+      <button disabled className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-white/60 text-black text-sm font-bold flex items-center justify-center gap-2 opacity-70">
         <Loader2 className="w-4 h-4 animate-spin" /> Saving...
       </button>
     );
     if (saveState === "success") return (
-      <button disabled className="px-6 py-2.5 rounded-lg bg-green-500 text-white text-sm font-bold flex items-center gap-2">
+      <button disabled className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2">
         <CheckCircle2 className="w-4 h-4" /> Saved
       </button>
     );
     if (saveState === "error") return (
-      <button onClick={handleSave} className="px-6 py-2.5 rounded-lg bg-alert text-white text-sm font-bold flex items-center gap-2">
+      <button onClick={handleSave} className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-alert text-white text-sm font-bold flex items-center justify-center gap-2">
         <AlertCircle className="w-4 h-4" /> Retry
       </button>
     );
@@ -139,24 +139,24 @@ export default function AutoReplyPage() {
   return (
     <div className="flex flex-col h-full bg-void">
       {/* Header */}
-      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
-        <div className="flex items-center gap-2">
-          <Bot className="w-4 h-4 text-text-secondary" />
-          <h1 className="text-lg font-semibold tracking-tight text-text-primary">Autonomous Mode</h1>
-          <span className="px-2 py-0.5 rounded-md bg-surface-raised border border-border-subtle text-[10px] font-medium text-text-tertiary uppercase tracking-wider">
+      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-2 min-w-0">
+          <Bot className="w-4 h-4 text-text-secondary shrink-0" />
+          <h1 className="text-lg font-semibold tracking-tight text-text-primary truncate">Autonomous Mode</h1>
+          <span className="px-2 py-0.5 rounded-md bg-surface-raised border border-border-subtle text-[10px] font-medium text-text-tertiary uppercase tracking-wider shrink-0">
             Beta
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-text-secondary">Master Switch</span>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-sm font-medium text-text-secondary hidden xs:inline">Master Switch</span>
           <Toggle enabled={cfg.is_enabled} onChange={(v) => update("is_enabled", v)} />
         </div>
       </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className={cn("w-full max-w-5xl p-8 pt-6 transition-opacity", loading && "opacity-40 pointer-events-none")}>
+        <div className={cn("w-full max-w-5xl p-4 md:p-8 pt-6 transition-opacity", loading && "opacity-40 pointer-events-none")}>
           <p className="text-sm text-text-secondary mb-8">
             Configure how the AI handles incoming emails when Autonomous Mode is active.
             The AI will only draft replies for emails that meet your defined priority thresholds.
@@ -273,7 +273,7 @@ export default function AutoReplyPage() {
               </div>
 
               {cfg.business_hours_only && (
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div>
                     <label className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wider">Start Time</label>
                     <input

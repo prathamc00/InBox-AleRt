@@ -84,16 +84,16 @@ export default function DashboardPage() {
     <div className="flex flex-col h-full relative">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/5 blur-[120px] rounded-full pointer-events-none" />
 
-      <header className="h-20 border-b border-border-subtle flex items-center justify-between px-8 shrink-0 relative z-10 bg-void/50 backdrop-blur-md">
-        <h1 className="text-xl font-semibold tracking-tight">Intelligence Dashboard</h1>
+      <header className="h-auto md:h-20 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between p-4 md:px-8 shrink-0 relative z-10 bg-void/50 backdrop-blur-md gap-4">
+        <h1 className="text-lg md:text-xl font-semibold tracking-tight">Intelligence Dashboard</h1>
 
-        <div className="flex items-center gap-4">
-          <div className="relative">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-initial">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
             <input
               type="text"
               placeholder="Search intelligence..."
-              className="w-64 bg-surface-raised border border-border-subtle rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:border-brand-500/50 transition-colors"
+              className="w-full md:w-64 bg-surface-raised border border-border-subtle rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:border-brand-500/50 transition-colors"
             />
           </div>
           <button
@@ -111,13 +111,13 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden relative z-10">
-        <div className={`flex flex-col border-r border-border-subtle transition-all duration-300 ${selectedEmail ? "w-1/2 lg:w-5/12" : "w-full"}`}>
-          <div className="p-6 pb-0 border-b border-border-subtle flex items-center gap-6">
+        <div className={`flex flex-col border-r border-border-subtle transition-all duration-300 ${selectedEmail ? "hidden md:flex md:w-1/2 lg:w-5/12" : "w-full"}`}>
+          <div className="p-4 md:p-6 pb-0 border-b border-border-subtle flex items-center gap-6 overflow-x-auto scrollbar-none">
             {(["Priority", "Auto-Replied", "Archived"] as FilterTab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`pb-3 text-sm font-medium transition-colors relative ${tab === t ? "text-white" : "text-text-secondary hover:text-white"}`}
+                className={`pb-3 text-sm font-medium transition-colors relative shrink-0 ${tab === t ? "text-white" : "text-text-secondary hover:text-white"}`}
               >
                 {t}
                 {tab === t && <motion.div layoutId="activeTab" className="absolute bottom-0 inset-x-0 h-0.5 bg-brand-500" />}
@@ -154,8 +154,10 @@ export default function DashboardPage() {
                       <span className="text-sm font-semibold text-white truncate">{email.sender_name || email.sender_email}</span>
                       <span className="text-xs text-text-tertiary hidden xl:inline-block truncate">&lt;{email.sender_email}&gt;</span>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[11px] text-text-tertiary">{new Date(email.received_at).toLocaleString()}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] text-text-tertiary shrink-0">
+                        {new Date(email.received_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
                       <ScoreBadge score={email.importance_score ?? 0} />
                     </div>
                   </div>
@@ -189,7 +191,7 @@ export default function DashboardPage() {
               exit={{ opacity: 0, x: 20 }}
               className="flex-1 flex flex-col bg-void overflow-hidden"
             >
-              <div className="h-16 border-b border-border-subtle flex items-center justify-between px-6 shrink-0 bg-surface/50">
+              <div className="h-16 border-b border-border-subtle flex items-center justify-between px-4 md:px-6 shrink-0 bg-surface/50">
                 <div className="text-xs text-text-tertiary uppercase tracking-wider">Status: {selectedEmail.status}</div>
                 <button
                   onClick={() => setSelectedEmailId(null)}
@@ -199,7 +201,7 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8">
+              <div className="flex-1 overflow-y-auto p-4 md:p-8">
                 <div className="mb-8 p-5 rounded-2xl bg-gradient-to-br from-brand-500/10 to-surface border border-brand-500/20">
                   <div className="flex items-center gap-2 mb-3">
                     <Sparkles className="w-4 h-4 text-brand-400" />
@@ -209,16 +211,16 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="max-w-2xl">
-                  <h2 className="text-2xl font-bold text-white mb-6 leading-snug">{selectedEmail.subject}</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-white mb-6 leading-snug">{selectedEmail.subject}</h2>
 
                   <div className="flex items-center gap-4 mb-8">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-600 to-accent flex items-center justify-center font-bold text-white">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-600 to-accent flex items-center justify-center font-bold text-white shrink-0">
                       {(selectedEmail.sender_name || selectedEmail.sender_email || "?")[0]}
                     </div>
-                    <div>
-                      <p className="font-semibold text-white">{selectedEmail.sender_name || selectedEmail.sender_email}</p>
-                      <p className="text-xs text-text-tertiary">
-                        {selectedEmail.sender_email} - {new Date(selectedEmail.received_at).toLocaleString()}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white truncate">{selectedEmail.sender_name || selectedEmail.sender_email}</p>
+                      <p className="text-xs text-text-tertiary break-all">
+                        {selectedEmail.sender_email} • {new Date(selectedEmail.received_at).toLocaleString()}
                       </p>
                     </div>
                   </div>

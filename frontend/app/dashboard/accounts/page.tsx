@@ -85,14 +85,14 @@ export default function AccountsPage() {
   return (
     <div className="flex flex-col h-full bg-void">
       {/* Header */}
-      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
+      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
         <h1 className="text-lg font-semibold tracking-tight text-text-primary">Integrations</h1>
       </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-6xl p-8 pt-6">
-          <p className="text-sm text-text-secondary mb-10">
+        <div className="w-full max-w-6xl p-4 md:p-8 pt-6">
+          <p className="text-sm text-text-secondary mb-8">
             Connect your inboxes. The AI will securely process incoming mail via webhooks without storing your emails.
           </p>
 
@@ -115,13 +115,13 @@ export default function AccountsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.1 }}
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border transition-all",
+                      "flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all",
                       account.is_active 
                         ? "bg-surface border-border-subtle hover:border-border-strong" 
                         : "bg-surface border-alert/30"
                     )}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
                       {/* Provider Icon */}
                       <div className="w-10 h-10 rounded-lg bg-surface-raised border border-border-subtle flex items-center justify-center shrink-0">
                         {account.provider === "gmail" ? (
@@ -141,9 +141,9 @@ export default function AccountsPage() {
                         )}
                       </div>
 
-                      <div>
-                        <p className="font-medium text-sm text-text-primary">{account.email_address}</p>
-                        <div className="flex items-center gap-2 mt-1">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm text-text-primary truncate">{account.email_address}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
                           <span className={cn(
                             "text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
                             account.is_active ? "bg-success/10 text-success" : "bg-alert/10 text-alert"
@@ -151,14 +151,14 @@ export default function AccountsPage() {
                             {account.is_active ? "Active" : "Action Required"}
                           </span>
                           <span className="text-xs text-text-tertiary flex items-center gap-1">
-                            <RefreshCw className="w-3 h-3" />
+                            <RefreshCw className="w-3.5 h-3.5" />
                             {account.last_sync}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
                       <button
                         onClick={() => handleSyncNow(account.id)}
                         disabled={syncingId === account.id}

@@ -35,13 +35,13 @@ export default function BillingPage() {
   return (
     <div className="flex flex-col h-full bg-void">
       {/* Header */}
-      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
+      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 shrink-0 sticky top-0 bg-void/80 backdrop-blur-md z-10">
         <h1 className="text-lg font-semibold tracking-tight text-text-primary">Billing & Subscription</h1>
       </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-6xl p-8 pt-6">
+        <div className="w-full max-w-6xl p-4 md:p-8 pt-6">
           
           {/* Current Status */}
           <div className="p-6 rounded-2xl border border-border-subtle bg-surface mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
