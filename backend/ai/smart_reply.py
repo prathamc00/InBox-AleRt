@@ -64,10 +64,11 @@ async def generate_auto_reply(sender: str, subject: str, body: str, tone: str = 
                 if status in {429, 500, 502, 503, 504} and attempt < 2:
                     await asyncio.sleep(0.5 * (attempt + 1))
                     continue
+                err_text = exc.response.text[:100] if exc.response else str(exc)
                 log.error("Gemini auto-reply failed", status_code=status, error=str(exc))
-                return "Thank you for reaching out. I have received your message and will review it shortly."
+                return f"Error drafting reply: HTTP {status} - {err_text}"
             except Exception as exc:
                 log.error("Gemini auto-reply failed", error=str(exc))
-                return "Thank you for reaching out. I have received your message and will review it shortly."
+                return f"Error drafting reply: {str(exc)}"
 
-    return "Thank you for reaching out. I have received your message and will review it shortly."
+    return "Error drafting reply: Request failed."

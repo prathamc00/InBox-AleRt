@@ -166,9 +166,19 @@ export default function DashboardPage() {
                     <p className={`text-sm truncate ${selectedEmailId === email.id ? "text-brand-400 font-semibold" : "text-white font-medium"}`}>
                       {email.subject}
                     </p>
-                    {email.auto_replied && (
-                      <span className="shrink-0 text-[10px] uppercase tracking-wider font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded">
+                    {email.status === "auto_replied" && (
+                      <span className="shrink-0 text-[10px] uppercase tracking-wider font-bold text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
                         Auto-Replied
+                      </span>
+                    )}
+                    {email.status === "cancelled" && (
+                      <span className="shrink-0 text-[10px] uppercase tracking-wider font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+                        Cancelled
+                      </span>
+                    )}
+                    {email.status === "alerted" && email.auto_replied && (
+                      <span className="shrink-0 text-[10px] uppercase tracking-wider font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                        Auto-Reply Pending
                       </span>
                     )}
                   </div>

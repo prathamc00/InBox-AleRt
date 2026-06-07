@@ -97,10 +97,11 @@ async def get_ai_score_and_summary(sender: str, subject: str, body: str) -> Dict
                 if status in {429, 500, 502, 503, 504} and attempt < 2:
                     await asyncio.sleep(0.5 * (attempt + 1))
                     continue
+                err_text = exc.response.text[:100] if exc.response else str(exc)
                 log.error("Gemini scoring failed", status_code=status, error=str(exc))
-                return {"score": 50, "summary": "Error during AI analysis."}
+                return {"score": 50, "summary": f"Error during AI analysis: HTTP {status} - {err_text}"}
             except Exception as exc:
                 log.error("Gemini scoring failed", error=str(exc))
-                return {"score": 50, "summary": "Error during AI analysis."}
+                return {"score": 50, "summary": f"Error during AI analysis: {str(exc)}"}
 
-    return {"score": 50, "summary": "Error during AI analysis."}
+    return {"score": 50, "summary": "Error during AI analysis: Request failed."}
