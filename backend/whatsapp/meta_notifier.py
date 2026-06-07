@@ -120,7 +120,7 @@ class MetaNotifier:
         to_number: str,
         template_name: str,
         components: list[dict[str, Any]] | None = None,
-        language_code: str = "en_US",
+        language_code: str = "en",
     ) -> tuple[bool, str]:
         """Send a pre-approved Meta template message.
 
