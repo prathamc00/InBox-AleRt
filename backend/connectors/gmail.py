@@ -1,6 +1,7 @@
 import base64
 import email
 from email.utils import parseaddr
+from email.header import decode_header
 from typing import Any, Dict
 
 from google.oauth2.credentials import Credentials
@@ -9,6 +10,26 @@ from googleapiclient.discovery import build
 from core.config import settings
 from core.security import decrypt_token
 from models.account import ConnectedAccount
+
+
+def decode_mime_header(header_value: str | None) -> str:
+    if not header_value:
+        return ""
+    try:
+        decoded_parts = decode_header(header_value)
+        result_parts = []
+        for part, encoding in decoded_parts:
+            if isinstance(part, bytes):
+                charset = encoding or "utf-8"
+                try:
+                    result_parts.append(part.decode(charset, errors="replace"))
+                except LookupError:
+                    result_parts.append(part.decode("utf-8", errors="replace"))
+            else:
+                result_parts.append(part)
+        return "".join(result_parts)
+    except Exception:
+        return header_value
 
 
 class GmailConnector:
@@ -82,8 +103,10 @@ class GmailConnector:
         msg_bytes = base64.urlsafe_b64decode(raw_b64)
         mime_msg = email.message_from_bytes(msg_bytes)
 
-        subject = mime_msg.get("Subject", "No Subject")
-        sender = mime_msg.get("From", "Unknown Sender")
+        subject_raw = mime_msg.get("Subject", "No Subject")
+        subject = decode_mime_header(subject_raw)
+        sender_raw = mime_msg.get("From", "Unknown Sender")
+        sender = decode_mime_header(sender_raw)
         sender_name, sender_email = parseaddr(sender)
         sender_email = sender_email or sender
         sender_name = sender_name or None
