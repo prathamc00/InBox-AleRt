@@ -31,15 +31,16 @@ class MetaNotifier:
     def send_test_message_result(self, to_number: str) -> tuple[bool, str]:
         """Send a test message.
 
-        Uses the Meta `hello_world` template so it works even without an open
-        24-hour conversation window (i.e. the user doesn't need to message first).
+        Uses the approved 'email_alerts' template instead of 'hello_world', 
+        as 'hello_world' is restricted to Meta's public test numbers.
         """
         if self._meta_ready():
-            log.info("WhatsApp test: sending hello_world template", provider="meta")
-            return self._send_meta_template(
+            log.info("WhatsApp test: sending email_alerts template", provider="meta")
+            return self.send_alert_template(
                 to_number=to_number,
-                template_name="hello_world",
-                language_code="en_US",
+                sender="test@inboxalert.com",
+                subject="Test Notification",
+                summary="This is a test notification from your InboxAlert dashboard to verify your WhatsApp configuration.",
             )
         return False, "No WhatsApp provider is configured. Set Meta credentials."
 
