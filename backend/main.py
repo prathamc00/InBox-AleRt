@@ -28,12 +28,13 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 async def _poll_all_accounts():
-    """Background task: poll all active Gmail accounts every 60s."""
+    """Background task: poll all active email accounts every 60s."""
     import asyncio
     from db.session import AsyncSessionLocal
     from models.account import ConnectedAccount
     from connectors.gmail import GmailConnector
-    from tasks.celery_app import _process_gmail_webhook_async
+    from connectors.outlook import OutlookConnector
+    from tasks.celery_app import _process_gmail_webhook_async, _process_outlook_webhook_async
     from sqlalchemy import select
 
     while True:
@@ -41,17 +42,22 @@ async def _poll_all_accounts():
         try:
             async with AsyncSessionLocal() as db:
                 result = await db.execute(
-                    select(ConnectedAccount).where(
-                        ConnectedAccount.is_active == True,
-                        ConnectedAccount.provider == "gmail",
-                    )
+                    select(ConnectedAccount).where(ConnectedAccount.is_active == True)
                 )
                 accounts = result.scalars().all()
                 for account in accounts:
                     try:
-                        ids = GmailConnector(account).list_recent_message_ids(limit=5)
-                        for mid in ids:
-                            await _process_gmail_webhook_async(str(account.id), mid)
+                        if account.provider == "gmail":
+                            ids = GmailConnector(account).list_recent_message_ids(limit=10)
+                            for mid in ids:
+                                await _process_gmail_webhook_async(str(account.id), mid)
+                        elif account.provider == "outlook":
+                            connector = OutlookConnector(account)
+                            ids = await connector.list_recent_message_ids(limit=10)
+                            db.add(account)
+                            await db.commit()
+                            for mid in ids:
+                                await _process_outlook_webhook_async(str(account.id), mid)
                     except Exception as e:
                         log.warning("Poll failed for account", account_id=str(account.id), error=str(e))
         except Exception as e:
@@ -62,11 +68,11 @@ async def _poll_all_accounts():
 async def lifespan(app: FastAPI):
     import asyncio
     log.info("InboxAlert API starting", debug=settings.DEBUG)
-    if settings.DEBUG:
-        task = asyncio.create_task(_poll_all_accounts())
+    # Run background polling in all environments so emails are processed
+    # automatically every 60 seconds without requiring manual "Sync Now".
+    task = asyncio.create_task(_poll_all_accounts())
     yield
-    if settings.DEBUG:
-        task.cancel()
+    task.cancel()
     log.info("InboxAlert API shutting down")
 
 
