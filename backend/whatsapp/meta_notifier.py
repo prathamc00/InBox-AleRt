@@ -4,9 +4,9 @@ Key rules:
 - Template messages (send_alert_template, send_auto_reply_template_alert) use
   pre-approved Meta templates and work without an open 24-hour conversation
   window.
-- Parameters are positional — they map to {{1}}, {{2}}, ... in the template
-  body in order. The 'parameter_name' field is NOT supported by Meta and must
-  not be included.
+- For templates with named variables (e.g. {{score}}, {{sender}}, etc.), the
+  'parameter_name' field is required in the API payload to map parameters
+  correctly to their variables.
 """
 
 from __future__ import annotations
@@ -30,18 +30,22 @@ class MetaNotifier:
         self.meta_phone_id = settings.WHATSAPP_PHONE_NUMBER_ID.strip()
 
     def send_test_message_result(self, to_number: str) -> tuple[bool, str]:
-        """Send a test message.
+        """Send a test message using the 'auto_reply_alerts' template.
 
-        Uses the approved 'email_alerts' template instead of 'hello_world', 
-        as 'hello_world' is restricted to Meta's public test numbers.
+        We use auto_reply_alerts because its structure is confirmed:
+        Body: {{1}}=score, {{2}}=sender, {{3}}=subject,
+              {{4}}=reply_draft, {{5}}=cancel_seconds
+        Button index 0: Cancel quick reply
         """
         if self._meta_ready():
-            log.info("WhatsApp test: sending email_alerts template", provider="meta")
-            return self.send_alert_template(
+            log.info("WhatsApp test: sending auto_reply_alerts template", provider="meta")
+            return self.send_auto_reply_template_alert(
                 to_number=to_number,
                 sender="test@inboxalert.com",
                 subject="Test Notification",
-                summary="This is a test notification from your InboxAlert dashboard to verify your WhatsApp configuration.",
+                reply_draft="This is a test notification from InboxAlert to verify your WhatsApp configuration.",
+                cancel_seconds=60,
+                email_record_id="test",
                 score=100,
             )
         return False, "No WhatsApp provider is configured. Set Meta credentials."
@@ -197,7 +201,12 @@ class MetaNotifier:
             except Exception:
                 data = {"raw": resp.text}
 
-            log.info("Meta template send response", status=resp.status_code, body=data)
+            log.info(
+                "Meta template send response",
+                status=resp.status_code,
+                body=data,
+                payload=payload,
+            )
 
             if 200 <= resp.status_code < 300:
                 return True, "sent"
@@ -205,7 +214,18 @@ class MetaNotifier:
             err = data.get("error", {})
             message = err.get("message") or data.get("raw") or "Unknown Meta error"
             code = err.get("code")
-            return False, f"Meta HTTP {resp.status_code} Error ({code}): {message}"
+            error_data = err.get("error_data", {})
+            details = error_data.get("details", "")
+            log.error(
+                "Meta template send FAILED",
+                code=code,
+                message=message,
+                error_data=error_data,
+                details=details,
+                sent_payload=payload,
+            )
+            detail_suffix = f" | {details}" if details else ""
+            return False, f"Meta HTTP {resp.status_code} Error ({code}): {message}{detail_suffix}"
         except Exception as exc:
             log.exception("Failed Meta template send", error=str(exc))
             return False, str(exc)
@@ -221,18 +241,16 @@ class MetaNotifier:
     ) -> tuple[bool, str]:
         """Send a standard email alert template.
 
-        Template body must use positional placeholders: {{1}} = sender,
-        {{2}} = subject, {{3}} = summary.
+        Template body uses named parameters: sender, subject, summary.
         Button at index 0 carries the cancel payload.
-        Parameters are matched positionally — do NOT include 'parameter_name'.
         """
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "text": sender},
-                    {"type": "text", "text": subject},
-                    {"type": "text", "text": summary[:300]},
+                    {"type": "text", "parameter_name": "sender", "text": sender},
+                    {"type": "text", "parameter_name": "subject", "text": subject},
+                    {"type": "text", "parameter_name": "summary", "text": summary[:300]},
                 ]
             },
             {
@@ -265,21 +283,19 @@ class MetaNotifier:
     ) -> tuple[bool, str]:
         """Send an auto-reply notification with a cancel button.
 
-        Template body must use positional placeholders:
-          {{1}} = score, {{2}} = sender, {{3}} = subject,
-          {{4}} = reply_draft, {{5}} = cancel_seconds.
+        Template body uses named parameters: score, sender, subject,
+        reply_draft, cancel_seconds.
         Button at index 0 carries the cancel payload.
-        Parameters are matched positionally — do NOT include 'parameter_name'.
         """
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "text": str(score)},
-                    {"type": "text", "text": sender},
-                    {"type": "text", "text": subject},
-                    {"type": "text", "text": reply_draft[:300]},
-                    {"type": "text", "text": str(cancel_seconds)},
+                    {"type": "text", "parameter_name": "score", "text": str(score)},
+                    {"type": "text", "parameter_name": "sender", "text": sender},
+                    {"type": "text", "parameter_name": "subject", "text": subject},
+                    {"type": "text", "parameter_name": "reply_draft", "text": reply_draft[:300]},
+                    {"type": "text", "parameter_name": "cancel_seconds", "text": str(cancel_seconds)},
                 ]
             },
             {
