@@ -24,6 +24,18 @@ log = structlog.get_logger()
 _META_API_VERSION = "v21.0"
 
 
+def _sanitize_template_param(val: Any) -> str:
+    if val is None:
+        return ""
+    import re
+    s = str(val)
+    # Replace newlines, carriage returns, and tabs with spaces
+    s = s.replace("\r\n", " ").replace("\n", " ").replace("\r", " ").replace("\t", " ")
+    # Replace more than 4 consecutive spaces or multiple spaces with a single space
+    s = re.sub(r'\s+', ' ', s)
+    return s.strip()
+
+
 class MetaNotifier:
     def __init__(self) -> None:
         self.meta_token = settings.WHATSAPP_ACCESS_TOKEN.strip()
@@ -245,9 +257,9 @@ class MetaNotifier:
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "email_sender", "text": sender},
-                    {"type": "text", "parameter_name": "email_subject", "text": subject},
-                    {"type": "text", "parameter_name": "email_summary", "text": summary[:300]},
+                    {"type": "text", "parameter_name": "email_sender", "text": _sanitize_template_param(sender)[:100]},
+                    {"type": "text", "parameter_name": "email_subject", "text": _sanitize_template_param(subject)[:150]},
+                    {"type": "text", "parameter_name": "email_summary", "text": _sanitize_template_param(summary)[:300]},
                 ]
             },
             {
@@ -285,16 +297,16 @@ class MetaNotifier:
         'email_alerts' template so you still receive notifications and can cancel replies.
         """
         fallback_summary = (
-            f"[Auto-reply Draft] {reply_draft[:150]}... "
+            f"[Auto-reply Draft] {reply_draft} "
             f"(You have {cancel_seconds}s to cancel)"
         )
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "email_sender", "text": sender},
-                    {"type": "text", "parameter_name": "email_subject", "text": subject},
-                    {"type": "text", "parameter_name": "email_summary", "text": fallback_summary},
+                    {"type": "text", "parameter_name": "email_sender", "text": _sanitize_template_param(sender)[:100]},
+                    {"type": "text", "parameter_name": "email_subject", "text": _sanitize_template_param(subject)[:150]},
+                    {"type": "text", "parameter_name": "email_summary", "text": _sanitize_template_param(fallback_summary)[:300]},
                 ]
             },
             {
