@@ -280,19 +280,21 @@ class MetaNotifier:
     ) -> tuple[bool, str]:
         """Send an auto-reply notification with a cancel button.
 
-        Template body uses named parameters: score, sender, subject,
-        reply_draft, cancel_seconds.
-        Button at index 0 carries the cancel payload.
+        FALLBACK: Since the 'auto_reply_alerts' template is currently 'In review'
+        on Meta, we temporarily route this notification through the approved
+        'email_alerts' template so you still receive notifications and can cancel replies.
         """
+        fallback_summary = (
+            f"[Auto-reply Draft] {reply_draft[:150]}... "
+            f"(You have {cancel_seconds}s to cancel)"
+        )
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "score", "text": str(score)},
-                    {"type": "text", "parameter_name": "sender", "text": sender},
-                    {"type": "text", "parameter_name": "subject", "text": subject},
-                    {"type": "text", "parameter_name": "reply_draft", "text": reply_draft[:300]},
-                    {"type": "text", "parameter_name": "cancel_seconds", "text": str(cancel_seconds)},
+                    {"type": "text", "parameter_name": "email_sender", "text": sender},
+                    {"type": "text", "parameter_name": "email_subject", "text": subject},
+                    {"type": "text", "parameter_name": "email_summary", "text": fallback_summary},
                 ]
             },
             {
@@ -309,7 +311,7 @@ class MetaNotifier:
         ]
         return self._send_meta_template(
             to_number=to_number,
-            template_name="auto_reply_alerts",
+            template_name="email_alerts",
             components=components,
         )
 
