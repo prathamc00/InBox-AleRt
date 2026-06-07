@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
 
+    # ── Self-Ping Keepalive (prevents Render free tier from sleeping) ──
+    # Set this to your full Render backend URL, e.g.:
+    # https://inbox-alert.onrender.com/health
+    SELF_PING_URL: str = ""
+
     # ── WhatsApp Business API (Meta Cloud) ────────────────────
     WHATSAPP_ACCESS_TOKEN: str = ""
     WHATSAPP_PHONE_NUMBER_ID: str = ""
