@@ -238,7 +238,7 @@ class MetaNotifier:
             {
                 "type": "button",
                 "sub_type": "quick_reply",
-                "index": "0",
+                "index": 0,
                 "parameters": [
                     {
                         "type": "payload",
@@ -285,7 +285,7 @@ class MetaNotifier:
             {
                 "type": "button",
                 "sub_type": "quick_reply",
-                "index": "0",
+                "index": 0,
                 "parameters": [
                     {
                         "type": "payload",
