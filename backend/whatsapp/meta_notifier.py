@@ -41,6 +41,7 @@ class MetaNotifier:
                 sender="test@inboxalert.com",
                 subject="Test Notification",
                 summary="This is a test notification from your InboxAlert dashboard to verify your WhatsApp configuration.",
+                score=100,
             )
         return False, "No WhatsApp provider is configured. Set Meta credentials."
 
