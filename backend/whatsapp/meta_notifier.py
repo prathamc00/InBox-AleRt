@@ -176,10 +176,9 @@ class MetaNotifier:
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "score", "text": str(score)},
-                    {"type": "text", "parameter_name": "sender", "text": sender},
-                    {"type": "text", "parameter_name": "subject", "text": subject},
-                    {"type": "text", "parameter_name": "summary", "text": summary[:300]},
+                    {"type": "text", "parameter_name": "email_sender", "text": sender},
+                    {"type": "text", "parameter_name": "email_subject", "text": subject},
+                    {"type": "text", "parameter_name": "email_summary", "text": summary[:300]},
                 ]
             }
         ]
