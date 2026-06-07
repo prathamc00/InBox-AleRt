@@ -136,6 +136,7 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
                     subject=parsed["subject"],
                     summary=summary or "",
                     score=score,
+                    email_id=str(record.id),
                 )
         
         # Schedule the auto-reply instead of sending it immediately
@@ -260,6 +261,7 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
                     subject=parsed["subject"],
                     summary=summary or "",
                     score=score,
+                    email_id=str(record.id),
                 )
 
         # Schedule the auto-reply instead of sending it immediately

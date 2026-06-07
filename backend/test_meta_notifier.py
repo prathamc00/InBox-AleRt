@@ -28,40 +28,43 @@ class TestMetaNotifier(unittest.TestCase):
         self.assertNotIn("twilio_configured", diag)
         self.assertNotIn("twilio_from_present", diag)
 
-    @patch("httpx.Client")
+    @patch("httpx.AsyncClient")
     def test_send_test_message_success(self, mock_client_class):
+        from unittest.mock import AsyncMock
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "success"}
-        mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         ok, result = self.notifier.send_test_message_result("+1234567890")
         self.assertTrue(ok)
         self.assertEqual(result, "sent")
 
-    @patch("httpx.Client")
+    @patch("httpx.AsyncClient")
     def test_send_test_message_failure(self, mock_client_class):
+        from unittest.mock import AsyncMock
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.json.return_value = {"error": {"message": "Invalid token", "code": 190}}
-        mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         ok, result = self.notifier.send_test_message_result("+1234567890")
         self.assertFalse(ok)
         self.assertIn("Error (190): Invalid token", result)
 
-    @patch("httpx.Client")
+    @patch("httpx.AsyncClient")
     def test_send_alert(self, mock_client_class):
+        from unittest.mock import AsyncMock
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "success"}
-        mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         ok, result = self.notifier.send_alert(
             to_number="+1234567890",
