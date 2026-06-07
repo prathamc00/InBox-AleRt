@@ -176,10 +176,10 @@ class MetaNotifier:
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "text": str(score)},
-                    {"type": "text", "text": sender},
-                    {"type": "text", "text": subject},
-                    {"type": "text", "text": summary[:300]},
+                    {"type": "text", "parameter_name": "score", "text": str(score)},
+                    {"type": "text", "parameter_name": "sender", "text": sender},
+                    {"type": "text", "parameter_name": "subject", "text": subject},
+                    {"type": "text", "parameter_name": "summary", "text": summary[:300]},
                 ]
             }
         ]
@@ -204,11 +204,11 @@ class MetaNotifier:
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "text": str(score)},
-                    {"type": "text", "text": sender},
-                    {"type": "text", "text": subject},
-                    {"type": "text", "text": reply_draft[:300]},
-                    {"type": "text", "text": str(cancel_seconds)},
+                    {"type": "text", "parameter_name": "score", "text": str(score)},
+                    {"type": "text", "parameter_name": "sender", "text": sender},
+                    {"type": "text", "parameter_name": "subject", "text": subject},
+                    {"type": "text", "parameter_name": "reply_draft", "text": reply_draft[:300]},
+                    {"type": "text", "parameter_name": "cancel_seconds", "text": str(cancel_seconds)},
                 ]
             },
             {
@@ -228,6 +228,7 @@ class MetaNotifier:
             template_name="auto_reply_alerts",
             components=components,
         )
+
 
     def _send_meta_text(self, to_number: str, text: str) -> tuple[bool, str]:
         """Send a free-form text message via Meta Cloud API.

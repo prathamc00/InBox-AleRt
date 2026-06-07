@@ -140,11 +140,14 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
         
         # Schedule the auto-reply instead of sending it immediately
         if should_auto_reply:
-            send_delayed_auto_reply.apply_async(
-                args=[str(record.id)],
-                countdown=cancel_seconds
-            )
-            log.info("Scheduled delayed auto-reply task for Gmail", record_id=str(record.id), countdown=cancel_seconds)
+            try:
+                send_delayed_auto_reply.apply_async(
+                    args=[str(record.id)],
+                    countdown=cancel_seconds
+                )
+                log.info("Scheduled delayed auto-reply task for Gmail", record_id=str(record.id), countdown=cancel_seconds)
+            except Exception as exc:
+                log.error("Failed to enqueue auto-reply in Celery", error=str(exc))
         
         await db.commit()
         log.info("Email processed", score=score, message_id=message_id)
@@ -261,11 +264,14 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
 
         # Schedule the auto-reply instead of sending it immediately
         if should_auto_reply:
-            send_delayed_auto_reply.apply_async(
-                args=[str(record.id)],
-                countdown=cancel_seconds
-            )
-            log.info("Scheduled delayed auto-reply task for Outlook", record_id=str(record.id), countdown=cancel_seconds)
+            try:
+                send_delayed_auto_reply.apply_async(
+                    args=[str(record.id)],
+                    countdown=cancel_seconds
+                )
+                log.info("Scheduled delayed auto-reply task for Outlook", record_id=str(record.id), countdown=cancel_seconds)
+            except Exception as exc:
+                log.error("Failed to enqueue auto-reply in Celery", error=str(exc))
 
         await db.commit()
         log.info("Outlook email processed", score=score, message_id=message_id)
