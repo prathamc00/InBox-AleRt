@@ -220,14 +220,15 @@ class MetaNotifier:
     ) -> tuple[bool, str]:
         """Send a standard email alert template.
 
-        Template body must use positional placeholders: {{1}} = sender,
-        {{2}} = subject, {{3}} = summary.
+        Template body must use positional placeholders: {{1}} = score,
+        {{2}} = sender, {{3}} = subject, {{4}} = summary.
         Parameters are matched positionally — do NOT include 'parameter_name'.
         """
         components = [
             {
                 "type": "body",
                 "parameters": [
+                    {"type": "text", "text": str(score)},
                     {"type": "text", "text": sender},
                     {"type": "text", "text": subject},
                     {"type": "text", "text": summary[:300]},
