@@ -30,23 +30,20 @@ class MetaNotifier:
         self.meta_phone_id = settings.WHATSAPP_PHONE_NUMBER_ID.strip()
 
     def send_test_message_result(self, to_number: str) -> tuple[bool, str]:
-        """Send a test message using the 'auto_reply_alerts' template.
+        """Send a test message using the 'email_alerts' template.
 
-        We use auto_reply_alerts because its structure is confirmed:
-        Body: {{1}}=score, {{2}}=sender, {{3}}=subject,
-              {{4}}=reply_draft, {{5}}=cancel_seconds
-        Button index 0: Cancel quick reply
+        We use email_alerts because it is currently Active on Meta,
+        whereas auto_reply_alerts may still be in review.
         """
         if self._meta_ready():
-            log.info("WhatsApp test: sending auto_reply_alerts template", provider="meta")
-            return self.send_auto_reply_template_alert(
+            log.info("WhatsApp test: sending email_alerts template", provider="meta")
+            return self.send_alert_template(
                 to_number=to_number,
                 sender="test@inboxalert.com",
                 subject="Test Notification",
-                reply_draft="This is a test notification from InboxAlert to verify your WhatsApp configuration.",
-                cancel_seconds=60,
-                email_record_id="test",
+                summary="This is a test notification from InboxAlert to verify your WhatsApp configuration.",
                 score=100,
+                email_id="test",
             )
         return False, "No WhatsApp provider is configured. Set Meta credentials."
 
@@ -241,16 +238,16 @@ class MetaNotifier:
     ) -> tuple[bool, str]:
         """Send a standard email alert template.
 
-        Template body uses named parameters: sender, subject, summary.
+        Template body uses named parameters: email_sender, email_subject, email_summary.
         Button at index 0 carries the cancel payload.
         """
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "sender", "text": sender},
-                    {"type": "text", "parameter_name": "subject", "text": subject},
-                    {"type": "text", "parameter_name": "summary", "text": summary[:300]},
+                    {"type": "text", "parameter_name": "email_sender", "text": sender},
+                    {"type": "text", "parameter_name": "email_subject", "text": subject},
+                    {"type": "text", "parameter_name": "email_summary", "text": summary[:300]},
                 ]
             },
             {
