@@ -116,6 +116,34 @@ class MetaNotifier:
             "Content-Type": "application/json",
         }
 
+    def _run_sync(self, coro):
+        import asyncio
+        import threading
+        from concurrent.futures import Future
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            result_future = Future()
+            def run_in_thread():
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    res = new_loop.run_until_complete(coro)
+                    result_future.set_result(res)
+                except Exception as e:
+                    result_future.set_exception(e)
+                finally:
+                    new_loop.close()
+            t = threading.Thread(target=run_in_thread)
+            t.start()
+            t.join()
+            return result_future.result()
+        return asyncio.run(coro)
+
     def _send_meta_template(
         self,
         to_number: str,
@@ -130,28 +158,7 @@ class MetaNotifier:
         Parameters are positional: [{"type":"text","text":"value"}, ...] mapped
         to {{1}}, {{2}}, ... in the approved template body.
         """
-        import asyncio
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            # Already inside an async context (FastAPI / background task).
-            # Schedule on the running loop and block until done.
-            import concurrent.futures
-            future = asyncio.ensure_future(
-                self._async_send_meta_template(
-                    to_number, template_name, components, language_code
-                )
-            )
-            # This path is only reached from sync Celery tasks — use asyncio.run instead.
-            return asyncio.run(
-                self._async_send_meta_template(
-                    to_number, template_name, components, language_code
-                )
-            )
-        return asyncio.run(
+        return self._run_sync(
             self._async_send_meta_template(
                 to_number, template_name, components, language_code
             )
@@ -287,8 +294,7 @@ class MetaNotifier:
         Only works inside a 24-hour conversation window (user must have messaged
         first). For business-initiated contacts, use send_alert_template instead.
         """
-        import asyncio
-        return asyncio.run(self._async_send_meta_text(to_number, text))
+        return self._run_sync(self._async_send_meta_text(to_number, text))
 
     async def _async_send_meta_text(self, to_number: str, text: str) -> tuple[bool, str]:
         """Async implementation of free-form text send."""
