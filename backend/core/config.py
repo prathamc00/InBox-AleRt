@@ -60,6 +60,14 @@ class Settings(BaseSettings):
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = ""
     WHATSAPP_APP_SECRET: str = ""
 
+    @field_validator("GEMINI_API_KEY", "WHATSAPP_ACCESS_TOKEN", mode="before")
+    @classmethod
+    def _strip_whitespace(cls, value):
+        """Strip leading/trailing whitespace from API keys (common .env copy-paste issue)."""
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
     @field_validator("DEBUG", mode="before")
     @classmethod
     def _parse_debug(cls, value):

@@ -19,25 +19,31 @@ router = APIRouter(prefix="/api/whatsapp/meta", tags=["whatsapp"])
 def verify_webhook_signature(payload: bytes, signature: str) -> bool:
     """
     Verify that the webhook request came from Meta.
-    Signature is in format: sha256=<hash>
+    Signature format: sha256=<hash>
+    Uses WHATSAPP_APP_SECRET (the Meta App Secret, not the verify token).
+    Returns False if app secret is not configured — never silently accepts.
     """
-    # Meta signs payloads with app secret, not webhook verify token.
-    # Keep a fallback to verify token for backward compatibility.
-    secret = settings.WHATSAPP_APP_SECRET or settings.WHATSAPP_WEBHOOK_VERIFY_TOKEN
-    if not secret:
-        log.warning("WhatsApp webhook signature verification disabled")
-        return True
-    
+    secret = settings.WHATSAPP_APP_SECRET.strip()
+    # Reject placeholder values that haven't been configured yet
+    if not secret or secret in ("your_meta_app_secret", "placeholder"):
+        log.error(
+            "WhatsApp webhook signature verification skipped: "
+            "WHATSAPP_APP_SECRET is not configured. Set it in Render env vars."
+        )
+        # In debug mode allow through so local development works without app secret.
+        # In production this means all webhook POSTs are rejected until configured.
+        return settings.DEBUG
+
     expected_signature = hmac.new(
         secret.encode(),
         payload,
         hashlib.sha256
     ).hexdigest()
-    
+
     # Remove 'sha256=' prefix if present
     if signature.startswith("sha256="):
         signature = signature[7:]
-    
+
     return hmac.compare_digest(expected_signature, signature)
 
 

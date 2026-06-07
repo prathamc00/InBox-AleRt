@@ -139,10 +139,16 @@ async def global_exception_handler(request: Request, exc: Exception):
     import traceback
     tb = traceback.format_exc()
     log.error("Unhandled exception", path=request.url.path, error=str(exc), traceback=tb)
-    # TEMPORARY: always expose error so we can diagnose production issues
+    if settings.DEBUG:
+        # In development, expose full error for easier debugging
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": str(exc), "type": type(exc).__name__},
+        )
+    # In production, return a safe generic message — full details are in server logs
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": str(exc), "type": type(exc).__name__},
+        content={"detail": "Internal server error. Please try again later."},
     )
 
 

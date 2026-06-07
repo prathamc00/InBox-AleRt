@@ -24,7 +24,7 @@ class User(Base):
 
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
     # Role-Based Access Control
     role: Mapped[str] = mapped_column(
@@ -44,7 +44,6 @@ class User(Base):
     # Account state
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    avatar_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
     # Billing
     tier: Mapped[str] = mapped_column(String(50), default="free")

@@ -4,7 +4,7 @@ Preferences are stored directly on the User model.
 """
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,8 +12,11 @@ from auth.dependencies import get_current_user
 from db.session import get_db
 from models.user import User
 from whatsapp.meta_notifier import meta_notifier as notifier
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
@@ -118,11 +121,15 @@ async def update_settings(
 
 
 @router.post("/whatsapp/test")
+@limiter.limit("3/hour")
 async def send_whatsapp_test(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Send a test WhatsApp message to the saved number and mark it verified on success."""
+    """Send a test WhatsApp message to the saved number and mark it verified on success.
+    Rate-limited to 3 requests per hour per IP to prevent WhatsApp number abuse.
+    """
     if not current_user.whatsapp_number:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

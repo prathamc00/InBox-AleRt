@@ -1,16 +1,17 @@
 """WhatsApp notifier using Meta Cloud API.
 
 Key rules:
-- Test messages use Meta's built-in `hello_world` template so they always
-  deliver even when there is no open 24-hour conversation window.
-- Real alert messages use free-form text, which is valid once the user has
-  interacted with the business number (i.e. the 24-hour window is open).
+- Template messages (send_alert_template, send_auto_reply_template_alert) use
+  pre-approved Meta templates and work without an open 24-hour conversation
+  window.
+- Parameters are positional — they map to {{1}}, {{2}}, ... in the template
+  body in order. The 'parameter_name' field is NOT supported by Meta and must
+  not be included.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from typing import Any
 
 import httpx
@@ -122,11 +123,48 @@ class MetaNotifier:
         components: list[dict[str, Any]] | None = None,
         language_code: str = "en",
     ) -> tuple[bool, str]:
-        """Send a pre-approved Meta template message.
+        """Send a pre-approved Meta template message (synchronous wrapper).
 
         Templates work without an open conversation window — they are the
         correct approach for business-initiated contacts.
+        Parameters are positional: [{"type":"text","text":"value"}, ...] mapped
+        to {{1}}, {{2}}, ... in the approved template body.
         """
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # Already inside an async context (FastAPI / background task).
+            # Schedule on the running loop and block until done.
+            import concurrent.futures
+            future = asyncio.ensure_future(
+                self._async_send_meta_template(
+                    to_number, template_name, components, language_code
+                )
+            )
+            # This path is only reached from sync Celery tasks — use asyncio.run instead.
+            return asyncio.run(
+                self._async_send_meta_template(
+                    to_number, template_name, components, language_code
+                )
+            )
+        return asyncio.run(
+            self._async_send_meta_template(
+                to_number, template_name, components, language_code
+            )
+        )
+
+    async def _async_send_meta_template(
+        self,
+        to_number: str,
+        template_name: str,
+        components: list[dict[str, Any]] | None = None,
+        language_code: str = "en",
+    ) -> tuple[bool, str]:
+        """Async implementation of Meta template send."""
         url = f"https://graph.facebook.com/{_META_API_VERSION}/{self.meta_phone_id}/messages"
         payload = {
             "messaging_product": "whatsapp",
@@ -140,8 +178,8 @@ class MetaNotifier:
         if components:
             payload["template"]["components"] = components
         try:
-            with httpx.Client(timeout=20.0) as client:
-                resp = client.post(
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                resp = await client.post(
                     url,
                     headers=self._meta_headers(),
                     content=json.dumps(payload),
@@ -173,14 +211,19 @@ class MetaNotifier:
         summary: str,
         score: int,
     ) -> tuple[bool, str]:
-        """Send a standard email alert template."""
+        """Send a standard email alert template.
+
+        Template body must use positional placeholders: {{1}} = sender,
+        {{2}} = subject, {{3}} = summary.
+        Parameters are matched positionally — do NOT include 'parameter_name'.
+        """
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "email_sender", "text": sender},
-                    {"type": "text", "parameter_name": "email_subject", "text": subject},
-                    {"type": "text", "parameter_name": "email_summary", "text": summary[:300]},
+                    {"type": "text", "text": sender},
+                    {"type": "text", "text": subject},
+                    {"type": "text", "text": summary[:300]},
                 ]
             }
         ]
@@ -200,16 +243,23 @@ class MetaNotifier:
         email_record_id: str,
         score: int,
     ) -> tuple[bool, str]:
-        """Send an auto-reply notification with a cancel button."""
+        """Send an auto-reply notification with a cancel button.
+
+        Template body must use positional placeholders:
+          {{1}} = score, {{2}} = sender, {{3}} = subject,
+          {{4}} = reply_draft, {{5}} = cancel_seconds.
+        Button at index 0 carries the cancel payload.
+        Parameters are matched positionally — do NOT include 'parameter_name'.
+        """
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "score", "text": str(score)},
-                    {"type": "text", "parameter_name": "sender", "text": sender},
-                    {"type": "text", "parameter_name": "subject", "text": subject},
-                    {"type": "text", "parameter_name": "reply_draft", "text": reply_draft[:300]},
-                    {"type": "text", "parameter_name": "cancel_seconds", "text": str(cancel_seconds)},
+                    {"type": "text", "text": str(score)},
+                    {"type": "text", "text": sender},
+                    {"type": "text", "text": subject},
+                    {"type": "text", "text": reply_draft[:300]},
+                    {"type": "text", "text": str(cancel_seconds)},
                 ]
             },
             {
@@ -234,8 +284,14 @@ class MetaNotifier:
     def _send_meta_text(self, to_number: str, text: str) -> tuple[bool, str]:
         """Send a free-form text message via Meta Cloud API.
 
-        Only works inside a 24-hour conversation window (user must have messaged first).
+        Only works inside a 24-hour conversation window (user must have messaged
+        first). For business-initiated contacts, use send_alert_template instead.
         """
+        import asyncio
+        return asyncio.run(self._async_send_meta_text(to_number, text))
+
+    async def _async_send_meta_text(self, to_number: str, text: str) -> tuple[bool, str]:
+        """Async implementation of free-form text send."""
         url = f"https://graph.facebook.com/{_META_API_VERSION}/{self.meta_phone_id}/messages"
         payload = {
             "messaging_product": "whatsapp",
@@ -244,8 +300,8 @@ class MetaNotifier:
             "text": {"body": text},
         }
         try:
-            with httpx.Client(timeout=20.0) as client:
-                resp = client.post(
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                resp = await client.post(
                     url,
                     headers=self._meta_headers(),
                     content=json.dumps(payload),
