@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BellRing, Shield, ArrowRight, Beaker } from "lucide-react";
+import { BellRing, Shield, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
@@ -18,20 +18,6 @@ export default function LoginPage() {
 
   const handleMicrosoftLogin = () => {
     window.location.href = `${API_URL}/auth/microsoft/login`;
-  };
-
-  const handleMockLogin = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/v1/auth/login`, { method: "POST" });
-      if (!res.ok) throw new Error("Backend error");
-      const data = await res.json();
-      if (data.access_token) {
-        setAuth(data.user, data.access_token, data.refresh_token);
-        router.push("/dashboard");
-      }
-    } catch {
-      alert("Could not reach backend. Is the FastAPI server running on port 8000?");
-    }
   };
 
   return (
@@ -99,27 +85,6 @@ export default function LoginPage() {
               <ArrowRight className="w-4 h-4 text-text-tertiary group-hover:text-white group-hover:translate-x-1 transition-all" />
             </button>
 
-            {/* Divider */}
-            <div className="relative flex items-center gap-3 my-1">
-              <div className="flex-1 h-px bg-border-subtle" />
-              <span className="text-xs text-text-tertiary font-medium">or</span>
-              <div className="flex-1 h-px bg-border-subtle" />
-            </div>
-
-            {/* Mock Login Dev Button */}
-            <button
-              onClick={handleMockLogin}
-              className="group flex items-center justify-between w-full px-5 py-3.5 rounded-xl bg-surface-raised border border-border-strong hover:border-text-tertiary transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <Beaker className="w-5 h-5 text-text-tertiary" />
-                <div className="text-left">
-                  <span className="font-medium text-sm text-text-secondary block">Sign in as Demo User</span>
-                  <span className="text-[11px] text-text-tertiary">Dev bypass — requires backend running</span>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-text-tertiary group-hover:text-white group-hover:translate-x-1 transition-all" />
-            </button>
           </div>
 
           {/* Security note */}

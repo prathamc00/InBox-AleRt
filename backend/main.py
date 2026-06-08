@@ -299,10 +299,6 @@ app.include_router(whatsapp_meta_router)
 from api.billing import router as billing_router
 app.include_router(billing_router)
 app.include_router(auth_router)
-if settings.DEBUG:
-    from api.mock_auth import router as mock_auth_router
-
-    app.include_router(mock_auth_router, prefix="/api/v1/auth")
 from api.accounts import router as accounts_router
 app.include_router(accounts_router)
 from api.settings import router as settings_router
