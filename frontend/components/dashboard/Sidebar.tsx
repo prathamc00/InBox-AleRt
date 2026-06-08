@@ -11,7 +11,7 @@ import {
   Bot,
   CreditCard,
   LogOut,
-  Sparkles,
+  BellRing,
   X
 } from "lucide-react";
 
@@ -57,8 +57,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             onClick={() => onClose?.()}
             className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
           >
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-lg" style={{background: "linear-gradient(135deg, #6366f1, #8b5cf6)"}}>
-              <Sparkles className="w-3.5 h-3.5 text-white" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-lg bg-white">
+              <BellRing className="w-3.5 h-3.5 text-black" strokeWidth={2.5} />
             </div>
             <span className="font-semibold text-sm tracking-tight text-white">InboxAlert</span>
           </Link>
