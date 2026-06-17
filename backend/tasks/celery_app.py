@@ -94,10 +94,18 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
             body=parsed["body"]
         )
         
+        # Determine if we should alert (alert all if user.notify_on_all is True, otherwise only if score >= 80)
+        should_alert = False
+        if user:
+            if user.notify_on_all:
+                should_alert = True
+            elif score >= 80:
+                should_alert = True
+        else:
+            should_alert = score >= 80
+
         # Determine status
-        status = "pending"
-        if score >= 50:
-            status = "alerted"
+        status = "alerted" if should_alert else "pending"
         
         # Save EmailRecord
         record = EmailRecord(
@@ -132,7 +140,7 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
                 cancel_seconds = auto_reply_rule.cancel_window_seconds
 
         # Trigger WhatsApp Notification
-        if score >= 50 and user and user.whatsapp_number:
+        if should_alert and user and user.whatsapp_number:
             if should_auto_reply:
                 notifier.send_auto_reply_template_alert(
                     to_number=user.whatsapp_number,
@@ -221,9 +229,18 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
             body=parsed["body"],
         )
 
-        status = "pending"
-        if score >= 50:
-            status = "alerted"
+        # Determine if we should alert (alert all if user.notify_on_all is True, otherwise only if score >= 80)
+        should_alert = False
+        if user:
+            if user.notify_on_all:
+                should_alert = True
+            elif score >= 80:
+                should_alert = True
+        else:
+            should_alert = score >= 80
+
+        # Determine status
+        status = "alerted" if should_alert else "pending"
 
         record = EmailRecord(
             tenant_id=account.tenant_id,
@@ -257,7 +274,7 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
                 cancel_seconds = auto_reply_rule.cancel_window_seconds
 
         # Trigger WhatsApp Notification
-        if score >= 50 and user and user.whatsapp_number:
+        if should_alert and user and user.whatsapp_number:
             if should_auto_reply:
                 notifier.send_auto_reply_template_alert(
                     to_number=user.whatsapp_number,
