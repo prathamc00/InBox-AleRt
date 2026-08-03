@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BellRing, Shield, ArrowRight } from "lucide-react";
+import { BellRing, Shield, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
@@ -18,6 +18,21 @@ export default function LoginPage() {
 
   const handleMicrosoftLogin = () => {
     window.location.href = `${API_URL}/auth/microsoft/login`;
+  };
+
+  const handleDemoLogin = () => {
+    setAuth(
+      {
+        id: "demo-user-001",
+        email: "demo@inboxalert.io",
+        display_name: "Demo User",
+        avatar_url: "https://api.dicebear.com/7.x/shapes/svg?seed=demo",
+        role: "demo",
+      },
+      "demo-access-token",
+      "demo-refresh-token"
+    );
+    router.push("/dashboard");
   };
 
   return (
@@ -86,6 +101,31 @@ export default function LoginPage() {
             </button>
 
           </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-border-subtle" />
+            <span className="text-xs text-text-tertiary">or</span>
+            <div className="flex-1 h-px bg-border-subtle" />
+          </div>
+
+          {/* Demo Login */}
+          <button
+            onClick={handleDemoLogin}
+            className="group relative flex items-center justify-between w-full px-5 py-3.5 rounded-xl border border-dashed border-border-subtle hover:border-white/30 bg-white/3 hover:bg-white/6 transition-all overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-3 relative">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-purple-400 to-cyan-400 flex items-center justify-center">
+                <Sparkles className="w-3 h-3 text-white" />
+              </div>
+              <div className="text-left">
+                <span className="block font-medium text-sm text-white">Try Demo Account</span>
+                <span className="block text-[11px] text-text-tertiary -mt-0.5">Explore without signing in</span>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-text-tertiary group-hover:text-white group-hover:translate-x-1 transition-all relative" />
+          </button>
 
           {/* Security note */}
           <div className="mt-8 flex items-start gap-2 text-xs text-text-tertiary">
