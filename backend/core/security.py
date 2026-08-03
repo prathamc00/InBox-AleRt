@@ -95,6 +95,39 @@ def decode_access_token(token: str) -> dict:
 # ── OAuth State (PKCE + anti-CSRF) ────────────────────────────────────────────
 
 
-def generate_oauth_state() -> str:
-    """Generate a cryptographically random state param for OAuth flows."""
-    return secrets.token_urlsafe(32)
+def generate_oauth_state(user_id: str | None = None, redirect_uri: str | None = None) -> str:
+    """
+    Generate a cryptographically signed, stateless state parameter for OAuth flows.
+    Contains nonce, user_id (if linking), redirect_uri, and expiry (15 mins).
+    Signed with HS256 using TOKEN_ENCRYPTION_KEY so it doesn't depend on session cookies.
+    """
+    now = datetime.now(timezone.utc)
+    payload = {
+        "nonce": secrets.token_hex(16),
+        "user_id": str(user_id) if user_id else None,
+        "redirect_uri": redirect_uri,
+        "exp": now + timedelta(minutes=15),
+        "type": "oauth_state",
+    }
+    return jwt.encode(payload, settings.TOKEN_ENCRYPTION_KEY, algorithm="HS256")
+
+
+def decode_oauth_state(state: str) -> dict:
+    """
+    Decode and verify the OAuth state token.
+    Returns the payload dictionary if valid.
+    Raises ValueError if invalid, tampered, or expired.
+    """
+    try:
+        payload = jwt.decode(
+            state,
+            settings.TOKEN_ENCRYPTION_KEY,
+            algorithms=["HS256"],
+            options={"require": ["exp", "type", "nonce"]},
+        )
+        if payload.get("type") != "oauth_state":
+            raise ValueError("Invalid state type")
+        return payload
+    except Exception as exc:
+        raise ValueError(f"Invalid OAuth state: {exc}") from exc
+

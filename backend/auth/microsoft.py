@@ -22,6 +22,7 @@ from core.security import (
     create_refresh_token,
     encrypt_token,
     generate_oauth_state,
+    decode_oauth_state,
     decode_access_token,
 )
 from connectors.outlook import OutlookConnector
@@ -51,21 +52,21 @@ def _build_msal_app() -> msal.ConfidentialClientApplication:
 @router.get("/login")
 async def microsoft_login(request: Request, token: str | None = None):
     """Redirect user to Microsoft OAuth consent screen."""
-    state = generate_oauth_state()
-    request.session["oauth_state"] = state
-
-    # Parse and store current user ID from JWT if logging in to link account
+    user_id = None
     if token:
         try:
             payload = decode_access_token(token)
             user_id = payload.get("sub")
-            if user_id:
-                request.session["current_user_id"] = user_id
         except Exception:
             pass
 
     base_url = get_external_base_url(request)
     redirect_uri = f"{base_url}/auth/microsoft/callback"
+
+    state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri)
+    request.session["oauth_state"] = state
+    if user_id:
+        request.session["current_user_id"] = user_id
     request.session["microsoft_redirect_uri"] = redirect_uri
 
     msal_app = _build_msal_app()
@@ -85,11 +86,22 @@ async def microsoft_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Microsoft OAuth callback, issue JWT."""
-    stored_state = request.session.pop("oauth_state", None)
-    if not stored_state or stored_state != state:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
+    current_user_id = None
+    redirect_uri = None
 
-    redirect_uri = request.session.pop("microsoft_redirect_uri", None) or settings.MICROSOFT_REDIRECT_URI
+    try:
+        state_payload = decode_oauth_state(state)
+        current_user_id = state_payload.get("user_id")
+        redirect_uri = state_payload.get("redirect_uri")
+    except ValueError:
+        stored_state = request.session.pop("oauth_state", None)
+        if not stored_state or stored_state != state:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
+        current_user_id = request.session.pop("current_user_id", None)
+        redirect_uri = request.session.pop("microsoft_redirect_uri", None)
+
+    if not redirect_uri:
+        redirect_uri = settings.MICROSOFT_REDIRECT_URI
 
     msal_app = _build_msal_app()
     result = msal_app.acquire_token_by_authorization_code(

@@ -22,6 +22,7 @@ from core.security import (
     create_refresh_token,
     encrypt_token,
     generate_oauth_state,
+    decode_oauth_state,
     decode_access_token,
 )
 from db.session import get_db
@@ -50,22 +51,22 @@ SCOPES = [
 @router.get("/login")
 async def google_login(request: Request, token: str | None = None):
     """Redirect user to Google OAuth consent screen."""
-    state = generate_oauth_state()
-    # Store state in server-side session (Redis-backed in prod)
-    request.session["oauth_state"] = state
-
-    # Parse and store current user ID from JWT if logging in to link account
+    user_id = None
     if token:
         try:
             payload = decode_access_token(token)
             user_id = payload.get("sub")
-            if user_id:
-                request.session["current_user_id"] = user_id
         except Exception:
             pass
 
     base_url = get_external_base_url(request)
     redirect_uri = f"{base_url}/auth/google/callback"
+
+    state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri)
+    # Store in session as fallback
+    request.session["oauth_state"] = state
+    if user_id:
+        request.session["current_user_id"] = user_id
     request.session["google_redirect_uri"] = redirect_uri
 
     params = {
@@ -95,12 +96,24 @@ async def google_callback(
     if not code or not state:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Missing OAuth code/state")
 
-    # Verify CSRF state
-    stored_state = request.session.pop("oauth_state", None)
-    if not stored_state or stored_state != state:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
+    # Verify CSRF state: try stateless signed state token first
+    current_user_id = None
+    redirect_uri = None
 
-    redirect_uri = request.session.pop("google_redirect_uri", None) or settings.GOOGLE_REDIRECT_URI
+    try:
+        state_payload = decode_oauth_state(state)
+        current_user_id = state_payload.get("user_id")
+        redirect_uri = state_payload.get("redirect_uri")
+    except ValueError:
+        # Fallback to session state check
+        stored_state = request.session.pop("oauth_state", None)
+        if not stored_state or stored_state != state:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
+        current_user_id = request.session.pop("current_user_id", None)
+        redirect_uri = request.session.pop("google_redirect_uri", None)
+
+    if not redirect_uri:
+        redirect_uri = settings.GOOGLE_REDIRECT_URI
 
     # Exchange code for tokens
     async with httpx.AsyncClient() as client:
