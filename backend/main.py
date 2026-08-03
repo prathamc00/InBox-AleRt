@@ -311,6 +311,22 @@ async def health():
     return {"status": "ok", "service": settings.APP_NAME}
 
 
+@app.get("/debug/oauth-config", tags=["debug"])
+async def debug_oauth_config():
+    """Returns safe metadata about OAuth configuration to verify env vars on Render."""
+    cid = settings.GOOGLE_CLIENT_ID.strip().strip("'").strip('"') if settings.GOOGLE_CLIENT_ID else ""
+    csec = settings.GOOGLE_CLIENT_SECRET.strip().strip("'").strip('"') if settings.GOOGLE_CLIENT_SECRET else ""
+    red = settings.GOOGLE_REDIRECT_URI.strip().strip("'").strip('"') if settings.GOOGLE_REDIRECT_URI else ""
+    return {
+        "google_client_id_prefix": cid[:15] + "..." if len(cid) > 15 else cid,
+        "google_client_id_len": len(cid),
+        "google_client_secret_prefix": csec[:6] + "..." if len(csec) > 6 else csec,
+        "google_client_secret_len": len(csec),
+        "google_redirect_uri_configured": red,
+        "debug_mode": settings.DEBUG,
+    }
+
+
 @app.get("/debug/gmail-watch", tags=["debug"])
 async def debug_gmail_watch(db=None):
     """Manually trigger Gmail watch and return result — DEBUG only."""

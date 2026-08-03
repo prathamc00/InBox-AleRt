@@ -79,9 +79,9 @@ class Settings(BaseSettings):
     )
     @classmethod
     def _strip_whitespace(cls, value):
-        """Strip leading/trailing whitespace from API keys and credentials."""
+        """Strip leading/trailing whitespace and surrounding quotes from API keys and credentials."""
         if isinstance(value, str):
-            return value.strip()
+            return value.strip().strip("'").strip('"')
         return value
 
     @field_validator("DEBUG", mode="before")
