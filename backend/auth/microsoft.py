@@ -93,10 +93,10 @@ async def microsoft_callback(
         state_payload = decode_oauth_state(state)
         current_user_id = state_payload.get("user_id")
         redirect_uri = state_payload.get("redirect_uri")
-    except ValueError:
+    except ValueError as val_err:
         stored_state = request.session.pop("oauth_state", None)
         if not stored_state or stored_state != state:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid OAuth state: {val_err}")
         current_user_id = request.session.pop("current_user_id", None)
         redirect_uri = request.session.pop("microsoft_redirect_uri", None)
 

@@ -34,6 +34,7 @@ def _build_engine():
         clean_url,
         echo=settings.DEBUG,
         pool_pre_ping=True,
+        pool_recycle=300,
         pool_size=10,
         max_overflow=20,
         connect_args=connect_args,
