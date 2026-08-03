@@ -48,6 +48,19 @@ SCOPES = [
 ]
 
 
+def _get_google_redirect_uri(request: Request) -> str:
+    """
+    Determine canonical redirect URI for Google OAuth.
+    If GOOGLE_REDIRECT_URI is explicitly configured in environment (e.g. on Render),
+    use it to guarantee 100% character match between login and token exchange.
+    """
+    configured = settings.GOOGLE_REDIRECT_URI.strip() if settings.GOOGLE_REDIRECT_URI else ""
+    if configured and configured != "http://localhost:8000/auth/google/callback":
+        return configured
+    base_url = get_external_base_url(request)
+    return f"{base_url}/auth/google/callback"
+
+
 @router.get("/login")
 async def google_login(request: Request, token: str | None = None):
     """Redirect user to Google OAuth consent screen."""
@@ -59,10 +72,9 @@ async def google_login(request: Request, token: str | None = None):
         except Exception:
             pass
 
-    base_url = get_external_base_url(request)
-    redirect_uri = f"{base_url}/auth/google/callback"
-
+    redirect_uri = _get_google_redirect_uri(request)
     state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri)
+
     # Store in session as fallback
     request.session["oauth_state"] = state
     if user_id:
@@ -70,7 +82,7 @@ async def google_login(request: Request, token: str | None = None):
     request.session["google_redirect_uri"] = redirect_uri
 
     params = {
-        "client_id": settings.GOOGLE_CLIENT_ID,
+        "client_id": settings.GOOGLE_CLIENT_ID.strip(),
         "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": " ".join(SCOPES),
@@ -115,24 +127,33 @@ async def google_callback(
         redirect_uri = request.session.pop("google_redirect_uri", None)
 
     if not redirect_uri:
-        redirect_uri = settings.GOOGLE_REDIRECT_URI
+        redirect_uri = _get_google_redirect_uri(request)
 
     # Exchange code for tokens
+    client_id = settings.GOOGLE_CLIENT_ID.strip()
+    client_secret = settings.GOOGLE_CLIENT_SECRET.strip()
+
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
             GOOGLE_TOKEN_URL,
             data={
                 "code": code,
-                "client_id": settings.GOOGLE_CLIENT_ID,
-                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "redirect_uri": redirect_uri,
                 "grant_type": "authorization_code",
             },
         )
     if token_resp.status_code != 200:
+        log.error(
+            "Google token exchange failed",
+            status_code=token_resp.status_code,
+            response_text=token_resp.text,
+            redirect_uri_used=redirect_uri,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Token exchange failed: {token_resp.status_code} {token_resp.text}",
+            detail=f"Token exchange failed: {token_resp.status_code} {token_resp.text} (redirect_uri: {redirect_uri})",
         )
 
     token_data = token_resp.json()

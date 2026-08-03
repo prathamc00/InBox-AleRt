@@ -65,10 +65,21 @@ class Settings(BaseSettings):
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = ""
     WHATSAPP_APP_SECRET: str = ""
 
-    @field_validator("GEMINI_API_KEY", "WHATSAPP_ACCESS_TOKEN", mode="before")
+    @field_validator(
+        "GEMINI_API_KEY",
+        "WHATSAPP_ACCESS_TOKEN",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+        "MICROSOFT_CLIENT_ID",
+        "MICROSOFT_CLIENT_SECRET",
+        "MICROSOFT_REDIRECT_URI",
+        "TOKEN_ENCRYPTION_KEY",
+        mode="before",
+    )
     @classmethod
     def _strip_whitespace(cls, value):
-        """Strip leading/trailing whitespace from API keys (common .env copy-paste issue)."""
+        """Strip leading/trailing whitespace from API keys and credentials."""
         if isinstance(value, str):
             return value.strip()
         return value
