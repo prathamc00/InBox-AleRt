@@ -20,7 +20,7 @@ async def process_incoming_email(
     sender: str, 
     subject: str, 
     body: str
-) -> Tuple[int, str, str | None]:
+) -> Tuple[int, str, str | None, str | None]:
     """
     1. Run rule engine.
     2. Run AI engine (if not bypassed).
@@ -99,4 +99,6 @@ async def process_incoming_email(
                 tone=rule.reply_tone
             )
                 
-    return final_score, ai_summary, auto_reply_draft
+    # Return final score, AI summary, auto-reply draft (if any), and rule reason
+    reason = rule_result.get("reason")
+    return final_score, ai_summary, auto_reply_draft, reason

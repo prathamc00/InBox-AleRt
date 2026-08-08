@@ -6,6 +6,7 @@ from auth.dependencies import get_current_user
 from db.session import get_db
 from models.user import User
 from models.email_record import EmailRecord
+from models.auto_reply import AutoReplyRule
 
 router = APIRouter(prefix="/api/emails", tags=["emails"])
 
@@ -31,6 +32,13 @@ async def get_emails(
     
     result = await db.execute(query)
     emails = result.scalars().all()
+
+    # Fetch user's auto-reply config so frontend can conditionally show actions
+    rule_result = await db.execute(
+        select(AutoReplyRule).where(AutoReplyRule.user_id == current_user.id)
+    )
+    auto_reply_rule = rule_result.scalar_one_or_none()
+    auto_reply_enabled = bool(auto_reply_rule and auto_reply_rule.is_enabled and not auto_reply_rule.dry_run)
     
     return [
         {
@@ -44,6 +52,7 @@ async def get_emails(
             "status": e.status,
             "auto_replied": e.auto_replied,
             "auto_reply_content": e.auto_reply_content,
+            "user_auto_reply_enabled": auto_reply_enabled,
         }
         for e in emails
     ]

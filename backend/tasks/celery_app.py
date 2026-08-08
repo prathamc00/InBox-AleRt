@@ -85,7 +85,7 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
         sender_name = parsed.get("sender_name")
         
         # Run importance engine
-        score, summary, reply_draft = await process_incoming_email(
+        score, summary, reply_draft, reason = await process_incoming_email(
             db=db,
             user_id=str(account.user_id),
             tenant_id=str(account.tenant_id),
@@ -149,6 +149,7 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
                     reply_draft=reply_draft,
                     cancel_seconds=cancel_seconds,
                     email_record_id=str(record.id),
+                    reason=reason,
                     score=score,
                 )
             else:
@@ -157,20 +158,16 @@ async def _process_gmail_webhook_async(account_id: str, message_id: str):
                     sender=sender_email,
                     subject=parsed["subject"],
                     summary=summary or "",
+                    reason=reason,
                     score=score,
                     email_id=str(record.id),
+                    auto_reply_enabled=False,
                 )
         
-        # Schedule the auto-reply instead of sending it immediately
+        # Do NOT schedule automatic sending. Auto-reply will only be sent
+        # after explicit user confirmation (Confirm button) via WhatsApp.
         if should_auto_reply:
-            try:
-                send_delayed_auto_reply.apply_async(
-                    args=[str(record.id)],
-                    countdown=cancel_seconds
-                )
-                log.info("Scheduled delayed auto-reply task for Gmail", record_id=str(record.id), countdown=cancel_seconds)
-            except Exception as exc:
-                log.error("Failed to enqueue auto-reply in Celery", error=str(exc))
+            log.info("Auto-reply pending user confirmation; not scheduled for automatic send", record_id=str(record.id))
         
         await db.commit()
         log.info("Email processed", score=score, message_id=message_id)
@@ -220,7 +217,7 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
             sender_name = sender_name.strip() or None
             sender_email = sender_email.strip().rstrip(">")
 
-        score, summary, reply_draft = await process_incoming_email(
+        score, summary, reply_draft, reason = await process_incoming_email(
             db=db,
             user_id=str(account.user_id),
             tenant_id=str(account.tenant_id),
@@ -283,28 +280,25 @@ async def _process_outlook_webhook_async(account_id: str, message_id: str):
                     reply_draft=reply_draft,
                     cancel_seconds=cancel_seconds,
                     email_record_id=str(record.id),
+                    reason=reason,
                     score=score,
                 )
             else:
-                notifier.send_alert_template(
+                    notifier.send_alert_template(
                     to_number=user.whatsapp_number,
                     sender=sender_email,
                     subject=parsed["subject"],
                     summary=summary or "",
+                    reason=reason,
                     score=score,
                     email_id=str(record.id),
-                )
+                        auto_reply_enabled=False,
+                    )
 
-        # Schedule the auto-reply instead of sending it immediately
+        # Do NOT schedule automatic sending. Auto-reply will only be sent
+        # after explicit user confirmation (Confirm button) via WhatsApp.
         if should_auto_reply:
-            try:
-                send_delayed_auto_reply.apply_async(
-                    args=[str(record.id)],
-                    countdown=cancel_seconds
-                )
-                log.info("Scheduled delayed auto-reply task for Outlook", record_id=str(record.id), countdown=cancel_seconds)
-            except Exception as exc:
-                log.error("Failed to enqueue auto-reply in Celery", error=str(exc))
+            log.info("Auto-reply pending user confirmation; not scheduled for automatic send", record_id=str(record.id))
 
         await db.commit()
         log.info("Outlook email processed", score=score, message_id=message_id)

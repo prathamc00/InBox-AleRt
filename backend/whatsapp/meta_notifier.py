@@ -239,6 +239,31 @@ class MetaNotifier:
             log.exception("Failed Meta template send", error=str(exc))
             return False, str(exc)
 
+    def build_template_payload(
+        self,
+        to_number: str,
+        template_name: str,
+        components: list[dict[str, Any]] | None = None,
+        language_code: str = "en",
+    ) -> dict[str, Any]:
+        """Build and return the JSON payload that would be sent to Meta.
+
+        This helper is useful for local testing and inspection without making
+        an HTTP call.
+        """
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_number.lstrip("+"),
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": language_code},
+            },
+        }
+        if components:
+            payload["template"]["components"] = components
+        return payload
+
     def send_alert_template(
         self,
         to_number: str,
@@ -247,33 +272,55 @@ class MetaNotifier:
         summary: str,
         score: int,
         email_id: str | None = None,
+        reason: str | None = None,
+        auto_reply_enabled: bool = False,
     ) -> tuple[bool, str]:
         """Send a standard email alert template.
 
         Template body uses named parameters: email_sender, email_subject, email_summary.
         Button at index 0 carries the cancel payload.
         """
+        # Build a clearer alert template with separated fields.
+        # Include buttons only when auto-reply is enabled.
+        # Combine fields into a single body parameter to avoid Meta's "too many variables" limit.
+        combined_lines = [f"Score: {score}", f"From: {_sanitize_template_param(sender)[:120]}", f"Subject: {_sanitize_template_param(subject)[:180]}"]
+        if summary:
+            combined_lines.append(f"Summary: {_sanitize_template_param(summary)[:400]}")
+        if reason:
+            combined_lines.append(f"Reason: {_sanitize_template_param(reason)[:300]}")
+        combined_text = " ".join(combined_lines)
+
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "email_sender", "text": _sanitize_template_param(sender)[:100]},
-                    {"type": "text", "parameter_name": "email_subject", "text": _sanitize_template_param(subject)[:150]},
-                    {"type": "text", "parameter_name": "email_summary", "text": _sanitize_template_param(summary)[:300]},
-                ]
-            },
-            {
-                "type": "button",
-                "sub_type": "quick_reply",
-                "index": 0,
-                "parameters": [
-                    {
-                        "type": "payload",
-                        "payload": f"cancel_reply_{email_id or 'test'}"
-                    }
-                ]
+                    {"type": "text", "parameter_name": "email_body", "text": combined_text}
+                ],
             }
         ]
+
+        # If auto-reply flow is possible, add Confirm and Cancel buttons.
+        if auto_reply_enabled and email_id:
+            components.append(
+                {
+                    "type": "button",
+                    "sub_type": "quick_reply",
+                    "index": 0,
+                    "parameters": [
+                        {"type": "payload", "payload": f"confirm_reply_{email_id}"}
+                    ],
+                }
+            )
+            components.append(
+                {
+                    "type": "button",
+                    "sub_type": "quick_reply",
+                    "index": 1,
+                    "parameters": [
+                        {"type": "payload", "payload": f"cancel_reply_{email_id}"}
+                    ],
+                }
+            )
         return self._send_meta_template(
             to_number=to_number,
             template_name="email_alerts",
@@ -290,23 +337,24 @@ class MetaNotifier:
         email_record_id: str,
         score: int,
     ) -> tuple[bool, str]:
-        """Send an auto-reply notification with a cancel button.
+        """Send an auto-reply draft notification that requires explicit confirmation.
 
-        FALLBACK: Since the 'auto_reply_alerts' template is currently 'In review'
-        on Meta, we temporarily route this notification through the approved
-        'email_alerts' template so you still receive notifications and can cancel replies.
+        This uses the dedicated `auto_reply_alerts` template (body receives a
+        single `email_body` parameter containing score/from/subject/draft/count).
         """
-        fallback_summary = (
-            f"[Auto-reply Draft] {reply_draft} "
-            f"(You have {cancel_seconds}s to cancel)"
-        )
+        fallback_summary = f"[Auto-reply Draft] {reply_draft} (You have {cancel_seconds}s to cancel)"
+        combined_text = " ".join([
+            f"Score: {score}",
+            f"From: {_sanitize_template_param(sender)[:120]}",
+            f"Subject: {_sanitize_template_param(subject)[:180]}",
+            f"Draft: {_sanitize_template_param(fallback_summary)[:400]}",
+        ])
+
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "email_sender", "text": _sanitize_template_param(sender)[:100]},
-                    {"type": "text", "parameter_name": "email_subject", "text": _sanitize_template_param(subject)[:150]},
-                    {"type": "text", "parameter_name": "email_summary", "text": _sanitize_template_param(fallback_summary)[:300]},
+                    {"type": "text", "parameter_name": "email_body", "text": combined_text}
                 ]
             },
             {
@@ -314,16 +362,21 @@ class MetaNotifier:
                 "sub_type": "quick_reply",
                 "index": 0,
                 "parameters": [
-                    {
-                        "type": "payload",
-                        "payload": f"cancel_reply_{email_record_id}"
-                    }
+                    {"type": "payload", "payload": f"confirm_reply_{email_record_id}"}
+                ]
+            },
+            {
+                "type": "button",
+                "sub_type": "quick_reply",
+                "index": 1,
+                "parameters": [
+                    {"type": "payload", "payload": f"cancel_reply_{email_record_id}"}
                 ]
             }
         ]
         return self._send_meta_template(
             to_number=to_number,
-            template_name="email_alerts",
+            template_name="auto_reply_alerts",
             components=components,
         )
 

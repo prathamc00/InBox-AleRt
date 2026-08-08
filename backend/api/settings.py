@@ -121,7 +121,8 @@ async def update_settings(
 
 
 @router.post("/whatsapp/test")
-@limiter.limit("3/hour")
+# Increased limit for local development to avoid 429 during testing
+@limiter.limit("30/hour")
 async def send_whatsapp_test(
     request: Request,
     current_user: User = Depends(get_current_user),

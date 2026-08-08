@@ -10,6 +10,10 @@ from sqlalchemy import select
 from db.session import AsyncSessionLocal
 from models.user import User
 from models.email_record import EmailRecord
+from models.account import ConnectedAccount
+from connectors.gmail import GmailConnector
+from connectors.outlook import OutlookConnector
+from datetime import datetime, timezone
 from core.config import settings
 
 log = structlog.get_logger()
@@ -103,13 +107,67 @@ async def process_whatsapp_message(from_number: str, message_text: str, button_i
         # Handle button interactions
         if button_id:
             if button_id.startswith("cancel_reply_"):
-                email.status = "cancelled"
-                log.info("Auto-reply cancelled via button click", email_id=email.id)
-                from whatsapp.meta_notifier import meta_notifier
-                meta_notifier._send_text(
-                    to_number=user.whatsapp_number,
-                    text=f"Auto-reply to '{email.subject}' has been cancelled."
-                )
+                # Only allow cancelling if an auto-reply draft exists and reply not already sent
+                if not email.auto_replied or email.status == "auto_replied":
+                    log.info("Cancel ignored: no pending auto-reply or already sent", email_id=email.id)
+                else:
+                    email.status = "cancelled"
+                    log.info("Auto-reply cancelled via button click", email_id=email.id)
+                    from whatsapp.meta_notifier import meta_notifier
+                    meta_notifier._send_text(
+                        to_number=user.whatsapp_number,
+                        text=f"Auto-reply to '{email.subject}' has been cancelled."
+                    )
+            elif button_id.startswith("confirm_reply_"):
+                # User confirmed: only allow if an auto-reply draft exists and rule still permits sending
+                try:
+                    if not email.auto_replied or not email.auto_reply_content:
+                        log.info("Confirm ignored: no auto-reply draft available", email_id=email.id)
+                    elif email.status == "cancelled" or email.status == "auto_replied":
+                        log.info("Confirm ignored: email cancelled or already replied", email_id=email.id)
+                    else:
+                        # Verify account and rule, then send reply via provider
+                        account = await db.get(ConnectedAccount, email.account_id)
+                        if not account:
+                            log.error("Account not found for confirmed auto-reply", account_id=email.account_id)
+                        else:
+                            # Double check rule is enabled and not dry-run
+                            from models.auto_reply import AutoReplyRule
+                            rule_result = await db.execute(
+                                select(AutoReplyRule).where(AutoReplyRule.user_id == account.user_id)
+                            )
+                            rule = rule_result.scalar_one_or_none()
+                            if not rule or not rule.is_enabled or rule.dry_run:
+                                log.info("Auto-reply rule disabled or in dry-run; skipping confirmed send", email_id=email.id)
+                            else:
+                                try:
+                                    if account.provider == "gmail":
+                                        connector = GmailConnector(account)
+                                        connector.send_reply(
+                                            thread_id=email.provider_thread_id,
+                                            to=email.sender_email,
+                                            subject=f"Re: {email.subject}",
+                                            body=email.auto_reply_content,
+                                        )
+                                    elif account.provider == "outlook":
+                                        connector = OutlookConnector(account)
+                                        await connector.send_reply(
+                                            message_id=email.provider_message_id,
+                                            body=email.auto_reply_content,
+                                        )
+                                    email.status = "auto_replied"
+                                    email.auto_reply_sent_at = datetime.now(timezone.utc)
+                                    await db.commit()
+                                    log.info("Auto-reply sent after user confirmation", email_id=email.id)
+                                    from whatsapp.meta_notifier import meta_notifier
+                                    meta_notifier._send_text(
+                                        to_number=user.whatsapp_number,
+                                        text=f"Auto-reply to '{email.subject}' has been sent."
+                                    )
+                                except Exception as exc:
+                                    log.error("Failed to send confirmed auto-reply", email_id=email.id, error=str(exc))
+                except Exception as e:
+                    log.exception("Error handling confirm_reply button", error=str(e), payload=button_id)
             elif button_id.startswith("reply_1_"):
                 reply_text = "Thanks, received."
                 email.status = "manual_replied"

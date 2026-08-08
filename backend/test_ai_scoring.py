@@ -32,7 +32,7 @@ async def main():
     async with AsyncSessionLocal() as db:
         print("Processing simulated email through rules and Gemini AI...")
         try:
-            score, summary, reply_draft = await process_incoming_email(
+            score, summary, reply_draft, reason = await process_incoming_email(
                 db=db,
                 user_id="00000000-0000-0000-0000-000000000000",  # Dummy UUID
                 tenant_id="00000000-0000-0000-0000-000000000000", # Dummy UUID
@@ -43,6 +43,7 @@ async def main():
             print("\n=== Test Results ===")
             print(f"Importance Score: {score}/100")
             print(f"AI Summary: {summary}")
+            print(f"Rule Reason: {reason}")
             if reply_draft:
                 print(f"Auto-reply Drafted:\n{reply_draft}")
             else:
