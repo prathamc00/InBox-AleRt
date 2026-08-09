@@ -1,9 +1,14 @@
 import axios from "axios";
 
-// Use same-origin proxy by default to avoid browser CORS/mixed-content/network issues.
-// Set NEXT_PUBLIC_API_URL only when you explicitly want direct browser-to-backend calls.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/backend";
+const isBrowser = typeof window !== "undefined";
+const isHttps = isBrowser && window.location.protocol === "https:";
+
+// When running on HTTPS in browser (Vercel), force /backend proxy to avoid Mixed Content blocking
+const API_URL = isHttps
+  ? "/backend"
+  : process.env.NEXT_PUBLIC_API_URL ?? "http://52.207.228.73:8000";
 const FALLBACK_LOCAL_API_URL = "http://52.207.228.73:8000";
+
 
 
 
