@@ -294,38 +294,17 @@ class MetaNotifier:
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "email_body", "text": combined_text}
+                    {"type": "text", "text": combined_text}
                 ],
             }
         ]
 
-        # If auto-reply flow is possible, add Confirm and Cancel buttons.
-        if auto_reply_enabled and email_id:
-            components.append(
-                {
-                    "type": "button",
-                    "sub_type": "quick_reply",
-                    "index": 0,
-                    "parameters": [
-                        {"type": "payload", "payload": f"confirm_reply_{email_id}"}
-                    ],
-                }
-            )
-            components.append(
-                {
-                    "type": "button",
-                    "sub_type": "quick_reply",
-                    "index": 1,
-                    "parameters": [
-                        {"type": "payload", "payload": f"cancel_reply_{email_id}"}
-                    ],
-                }
-            )
         return self._send_meta_template(
             to_number=to_number,
             template_name="email_alerts",
             components=components,
         )
+
 
     def send_auto_reply_template_alert(
         self,
