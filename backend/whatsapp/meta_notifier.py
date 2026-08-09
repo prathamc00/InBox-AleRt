@@ -220,6 +220,26 @@ class MetaNotifier:
             if 200 <= resp.status_code < 300:
                 return True, "sent"
 
+            # If language code was en_US and failed, retry once with en (or vice-versa)
+            fallback_lang = "en" if language_code == "en_US" else ("en_US" if language_code == "en" else None)
+            if fallback_lang and resp.status_code >= 400:
+                log.info("Retrying Meta template send with fallback language code", fallback_lang=fallback_lang)
+                alt_payload = dict(payload)
+                alt_payload["template"] = dict(payload["template"])
+                alt_payload["template"]["language"] = {"code": fallback_lang}
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    alt_resp = await client.post(
+                        url,
+                        headers=self._meta_headers(),
+                        content=json.dumps(alt_payload),
+                    )
+                if 200 <= alt_resp.status_code < 300:
+                    return True, "sent"
+                try:
+                    data = alt_resp.json()
+                except Exception:
+                    data = {"raw": alt_resp.text}
+
             err = data.get("error", {})
             message = err.get("message") or data.get("raw") or "Unknown Meta error"
             code = err.get("code")
@@ -238,6 +258,7 @@ class MetaNotifier:
         except Exception as exc:
             log.exception("Failed Meta template send", error=str(exc))
             return False, str(exc)
+
 
     def build_template_payload(
         self,
@@ -294,7 +315,11 @@ class MetaNotifier:
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "text": combined_text}
+                    {
+                        "type": "text",
+                        "parameter_name": "email_body",
+                        "text": combined_text,
+                    }
                 ],
             }
         ]
@@ -303,7 +328,9 @@ class MetaNotifier:
             to_number=to_number,
             template_name="email_alerts",
             components=components,
+            language_code="en_US",
         )
+
 
 
     def send_auto_reply_template_alert(
