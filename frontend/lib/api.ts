@@ -2,8 +2,9 @@ import axios from "axios";
 
 // Use same-origin proxy by default to avoid browser CORS/mixed-content/network issues.
 // Set NEXT_PUBLIC_API_URL only when you explicitly want direct browser-to-backend calls.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://52.207.228.73:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/backend";
 const FALLBACK_LOCAL_API_URL = "http://52.207.228.73:8000";
+
 
 
 export const api = axios.create({
