@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: inboxalert-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-inboxalert}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-inboxalert_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-inboxalert}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inboxalert}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: inboxalert-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:-inboxalert_redis_password}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-inboxalert_redis_password}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: inboxalert-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-inboxalert}:${POSTGRES_PASSWORD:-inboxalert_secure_password}@postgres:5432/${POSTGRES_DB:-inboxalert}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-inboxalert_redis_password}@redis:6379/0
+
+volumes:
+  postgres_data:
+  redis_data:
