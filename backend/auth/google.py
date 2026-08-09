@@ -130,8 +130,9 @@ async def google_callback(
         redirect_uri = _get_google_redirect_uri(request)
 
     # Exchange code for tokens
-    client_id = settings.GOOGLE_CLIENT_ID.strip()
-    client_secret = settings.GOOGLE_CLIENT_SECRET.strip()
+    client_id = settings.GOOGLE_CLIENT_ID.strip().replace(" ", "")
+    client_secret = settings.GOOGLE_CLIENT_SECRET.strip().replace(" ", "")
+
 
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
