@@ -1,13 +1,16 @@
 import axios from "axios";
 
-const isBrowser = typeof window !== "undefined";
-const isHttps = isBrowser && window.location.protocol === "https:";
+function getApiUrl(): string {
 
-// When running on HTTPS in browser (Vercel), force /backend proxy to avoid Mixed Content blocking
-const API_URL = isHttps
-  ? "/backend"
-  : process.env.NEXT_PUBLIC_API_URL ?? "http://52.207.228.73:8000";
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    return "/backend";
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://52.207.228.73:8000";
+}
+
+const API_URL = getApiUrl();
 const FALLBACK_LOCAL_API_URL = "http://52.207.228.73:8000";
+
 
 
 
