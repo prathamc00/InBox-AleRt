@@ -50,7 +50,7 @@ def _build_msal_app() -> msal.ConfidentialClientApplication:
 
 
 @router.get("/login")
-async def microsoft_login(request: Request, token: str | None = None):
+async def microsoft_login(request: Request, token: str | None = None, redirect_to_app: bool = False):
     """Redirect user to Microsoft OAuth consent screen."""
     user_id = None
     if token:
@@ -63,11 +63,12 @@ async def microsoft_login(request: Request, token: str | None = None):
     base_url = get_external_base_url(request)
     redirect_uri = f"{base_url}/auth/microsoft/callback"
 
-    state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri)
+    state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri, redirect_to_app=redirect_to_app)
     request.session["oauth_state"] = state
     if user_id:
         request.session["current_user_id"] = user_id
     request.session["microsoft_redirect_uri"] = redirect_uri
+    request.session["redirect_to_app"] = redirect_to_app
 
     msal_app = _build_msal_app()
     auth_url = msal_app.get_authorization_request_url(
@@ -88,17 +89,20 @@ async def microsoft_callback(
     """Handle Microsoft OAuth callback, issue JWT."""
     current_user_id = None
     redirect_uri = None
+    redirect_to_app = False
 
     try:
         state_payload = decode_oauth_state(state)
         current_user_id = state_payload.get("user_id")
         redirect_uri = state_payload.get("redirect_uri")
+        redirect_to_app = state_payload.get("redirect_to_app", False)
     except ValueError as val_err:
         stored_state = request.session.pop("oauth_state", None)
         if not stored_state or stored_state != state:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid OAuth state: {val_err}")
         current_user_id = request.session.pop("current_user_id", None)
         redirect_uri = request.session.pop("microsoft_redirect_uri", None)
+        redirect_to_app = request.session.pop("redirect_to_app", False)
 
     if not redirect_uri:
         redirect_uri = settings.MICROSOFT_REDIRECT_URI
@@ -233,9 +237,8 @@ async def microsoft_callback(
 
     access_jwt = create_access_token(str(user.id), str(user.tenant_id), user.role)
 
-    # Redirect to frontend callback page with tokens
-    frontend_url = settings.FRONTEND_URL
-    params = urlencode({
+    # Redirect with tokens
+    params_dict = {
         "access_token": access_jwt,
         "refresh_token": raw_refresh,
         "is_new_user": str(is_new_user).lower(),
@@ -244,5 +247,11 @@ async def microsoft_callback(
         "display_name": user.display_name,
         "avatar_url": "",
         "role": user.role,
-    })
-    return RedirectResponse(url=f"{frontend_url}/callback?{params}")
+    }
+
+    if redirect_to_app:
+        app_url = f"inboxalert://auth/callback?{urlencode(params_dict)}"
+        return RedirectResponse(url=app_url)
+
+    frontend_url = settings.FRONTEND_URL
+    return RedirectResponse(url=f"{frontend_url}/callback?{urlencode(params_dict)}")

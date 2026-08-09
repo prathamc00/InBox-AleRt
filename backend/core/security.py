@@ -95,10 +95,14 @@ def decode_access_token(token: str) -> dict:
 # ── OAuth State (PKCE + anti-CSRF) ────────────────────────────────────────────
 
 
-def generate_oauth_state(user_id: str | None = None, redirect_uri: str | None = None) -> str:
+def generate_oauth_state(
+    user_id: str | None = None,
+    redirect_uri: str | None = None,
+    redirect_to_app: bool = False,
+) -> str:
     """
     Generate a cryptographically signed, stateless state parameter for OAuth flows.
-    Contains nonce, user_id (if linking), redirect_uri, and expiry (15 mins).
+    Contains nonce, user_id (if linking), redirect_uri, redirect_to_app, and expiry (15 mins).
     Signed with HS256 using TOKEN_ENCRYPTION_KEY so it doesn't depend on session cookies.
     """
     now = datetime.now(timezone.utc)
@@ -106,6 +110,7 @@ def generate_oauth_state(user_id: str | None = None, redirect_uri: str | None = 
         "nonce": secrets.token_hex(16),
         "user_id": str(user_id) if user_id else None,
         "redirect_uri": redirect_uri,
+        "redirect_to_app": redirect_to_app,
         "exp": now + timedelta(minutes=15),
         "type": "oauth_state",
     }

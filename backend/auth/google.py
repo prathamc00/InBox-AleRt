@@ -62,7 +62,7 @@ def _get_google_redirect_uri(request: Request) -> str:
 
 
 @router.get("/login")
-async def google_login(request: Request, token: str | None = None):
+async def google_login(request: Request, token: str | None = None, redirect_to_app: bool = False):
     """Redirect user to Google OAuth consent screen."""
     user_id = None
     if token:
@@ -73,13 +73,14 @@ async def google_login(request: Request, token: str | None = None):
             pass
 
     redirect_uri = _get_google_redirect_uri(request)
-    state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri)
+    state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri, redirect_to_app=redirect_to_app)
 
     # Store in session as fallback
     request.session["oauth_state"] = state
     if user_id:
         request.session["current_user_id"] = user_id
     request.session["google_redirect_uri"] = redirect_uri
+    request.session["redirect_to_app"] = redirect_to_app
 
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID.strip(),
@@ -111,11 +112,13 @@ async def google_callback(
     # Verify CSRF state: try stateless signed state token first
     current_user_id = None
     redirect_uri = None
+    redirect_to_app = False
 
     try:
         state_payload = decode_oauth_state(state)
         current_user_id = state_payload.get("user_id")
         redirect_uri = state_payload.get("redirect_uri")
+        redirect_to_app = state_payload.get("redirect_to_app", False)
     except ValueError as val_err:
         log.warning("Stateless OAuth state decode failed, checking session fallback", error=str(val_err))
         # Fallback to session state check
@@ -125,6 +128,7 @@ async def google_callback(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid OAuth state: {val_err}")
         current_user_id = request.session.pop("current_user_id", None)
         redirect_uri = request.session.pop("google_redirect_uri", None)
+        redirect_to_app = request.session.pop("redirect_to_app", False)
 
     if not redirect_uri:
         redirect_uri = _get_google_redirect_uri(request)
@@ -273,9 +277,8 @@ async def google_callback(
         str(user.id), str(user.tenant_id), user.role
     )
 
-    # Redirect to frontend callback page with tokens in query string
-    frontend_url = settings.FRONTEND_URL
-    params = urlencode({
+    # Redirect with tokens in query string
+    params_dict = {
         "access_token": access_jwt,
         "refresh_token": raw_refresh,
         "is_new_user": str(is_new_user).lower(),
@@ -284,5 +287,11 @@ async def google_callback(
         "display_name": user.display_name,
         "avatar_url": user.avatar_url or "",
         "role": user.role,
-    })
-    return RedirectResponse(url=f"{frontend_url}/callback?{params}")
+    }
+
+    if redirect_to_app:
+        app_url = f"inboxalert://auth/callback?{urlencode(params_dict)}"
+        return RedirectResponse(url=app_url)
+
+    frontend_url = settings.FRONTEND_URL
+    return RedirectResponse(url=f"{frontend_url}/callback?{urlencode(params_dict)}")
