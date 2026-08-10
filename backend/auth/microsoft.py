@@ -49,6 +49,14 @@ def _build_msal_app() -> msal.ConfidentialClientApplication:
     )
 
 
+def _get_microsoft_redirect_uri(request: Request) -> str:
+    configured = settings.MICROSOFT_REDIRECT_URI.strip() if settings.MICROSOFT_REDIRECT_URI else ""
+    if configured and configured != "http://localhost:8000/auth/microsoft/callback":
+        return configured
+    base_url = get_external_base_url(request)
+    return f"{base_url}/auth/microsoft/callback"
+
+
 @router.get("/login")
 async def microsoft_login(request: Request, token: str | None = None, redirect_to_app: bool = False):
     """Redirect user to Microsoft OAuth consent screen."""
@@ -60,8 +68,8 @@ async def microsoft_login(request: Request, token: str | None = None, redirect_t
         except Exception:
             pass
 
-    base_url = get_external_base_url(request)
-    redirect_uri = f"{base_url}/auth/microsoft/callback"
+    redirect_uri = _get_microsoft_redirect_uri(request)
+
 
     state = generate_oauth_state(user_id=user_id, redirect_uri=redirect_uri, redirect_to_app=redirect_to_app)
     request.session["oauth_state"] = state
