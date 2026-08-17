@@ -45,7 +45,8 @@ class TestWhatsAppCancelFlow(unittest.IsolatedAsyncioTestCase):
             tenant_id=test_tenant_id,
             subject="Important business",
             sender_email="boss@company.com",
-            status="alerted"
+            status="alerted",
+            auto_replied=True
         )
         mock_email_result = MagicMock()
         mock_email_result.scalar_one_or_none.return_value = mock_email

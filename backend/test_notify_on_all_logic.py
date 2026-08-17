@@ -73,7 +73,7 @@ class TestNotifyOnAllLogic(unittest.IsolatedAsyncioTestCase):
         }
 
         # Mock process_incoming_email to return score = 30 (routine/low priority)
-        mock_process_email.return_value = (30, "Low score summary", None)
+        mock_process_email.return_value = (30, "Low score summary", None, "Keyword analysis")
 
         # Run webhook
         await _process_gmail_webhook_async(str(account_id), "msg123")
@@ -145,7 +145,7 @@ class TestNotifyOnAllLogic(unittest.IsolatedAsyncioTestCase):
         }
 
         # Mock process_incoming_email to return score = 30 (below 80)
-        mock_process_email.return_value = (30, "Low score summary", None)
+        mock_process_email.return_value = (30, "Low score summary", None, "Keyword analysis")
 
         # Run webhook
         await _process_gmail_webhook_async(str(account_id), "msg123")
@@ -216,7 +216,7 @@ class TestNotifyOnAllLogic(unittest.IsolatedAsyncioTestCase):
         }
 
         # Mock process_incoming_email to return score = 85 (>= 80)
-        mock_process_email.return_value = (85, "High score summary", None)
+        mock_process_email.return_value = (85, "High score summary", None, "Keyword analysis")
 
         # Run webhook
         await _process_gmail_webhook_async(str(account_id), "msg123")

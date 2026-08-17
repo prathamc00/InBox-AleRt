@@ -17,12 +17,27 @@ from whatsapp.meta_notifier import meta_notifier
 def main():
     to_number = "+15555550123"
 
-    # Build alert payload
+    # Build alert payload formatted text
+    sender = "submissions@formsubmit.co"
+    subject = "Action Required: Activate FormSubmit on https://prathmeshai.vercel.app/"
+    summary = "This email from FormSubmit requires you to activate a form on https://prathmeshai.vercel.app/ by clicking the 'Activate Form' link."
+    reason = "Rule: Keyword analysis"
+    score = 100
+
+    combined_lines = [
+        f"*Score:* {score}/100",
+        f"*From:* {sender}",
+        f"*Subject:* {subject}",
+        f"\n*Summary:*\n{summary}",
+        f"\n*Reason:* {reason}",
+    ]
+    formatted_alert_text = "\n".join(combined_lines)
+
     alert_components = [
         {
             "type": "body",
             "parameters": [
-                {"type": "text", "parameter_name": "email_body", "text": "Score: 85 From: sam.ko@example.com Subject: Urgent: Review Q3 Plan Summary: AI: Sam, I will look into this as soon as possible Reason: Matched rule: High-priority sender"}
+                {"type": "text", "parameter_name": "email_body", "text": formatted_alert_text}
             ]
         }
     ]

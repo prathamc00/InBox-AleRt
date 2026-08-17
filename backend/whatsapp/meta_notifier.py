@@ -301,15 +301,17 @@ class MetaNotifier:
         Template body uses named parameters: email_sender, email_subject, email_summary.
         Button at index 0 carries the cancel payload.
         """
-        # Build a clearer alert template with separated fields.
-        # Include buttons only when auto-reply is enabled.
-        # Combine fields into a single body parameter to avoid Meta's "too many variables" limit.
-        combined_lines = [f"Score: {score}", f"From: {_sanitize_template_param(sender)[:120]}", f"Subject: {_sanitize_template_param(subject)[:180]}"]
+        # Build a clear, well-structured alert template with bold labels and line breaks.
+        combined_lines = [
+            f"*Score:* {score}/100",
+            f"*From:* {_sanitize_template_param(sender)[:120]}",
+            f"*Subject:* {_sanitize_template_param(subject)[:180]}",
+        ]
         if summary:
-            combined_lines.append(f"Summary: {_sanitize_template_param(summary)[:400]}")
+            combined_lines.append(f"\n*Summary:*\n{_sanitize_template_param(summary)[:400]}")
         if reason:
-            combined_lines.append(f"Reason: {_sanitize_template_param(reason)[:300]}")
-        combined_text = " ".join(combined_lines)
+            combined_lines.append(f"\n*Reason:* {_sanitize_template_param(reason)[:250]}")
+        combined_text = "\n".join(combined_lines)
 
         components = [
             {
@@ -348,13 +350,14 @@ class MetaNotifier:
         This uses the dedicated `auto_reply_alerts` template (body receives a
         single `email_body` parameter containing score/from/subject/draft/count).
         """
-        fallback_summary = f"[Auto-reply Draft] {reply_draft} (You have {cancel_seconds}s to cancel)"
-        combined_text = " ".join([
-            f"Score: {score}",
-            f"From: {_sanitize_template_param(sender)[:120]}",
-            f"Subject: {_sanitize_template_param(subject)[:180]}",
-            f"Draft: {_sanitize_template_param(fallback_summary)[:400]}",
-        ])
+        combined_lines = [
+            f"*Score:* {score}/100",
+            f"*From:* {_sanitize_template_param(sender)[:120]}",
+            f"*Subject:* {_sanitize_template_param(subject)[:180]}",
+            f"\n*Draft Reply:*\n{_sanitize_template_param(reply_draft)[:400]}",
+            f"\n⏱️ _Confirm or cancel within {cancel_seconds}s using the buttons below._",
+        ]
+        combined_text = "\n".join(combined_lines)
 
         components = [
             {
