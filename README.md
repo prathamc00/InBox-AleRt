@@ -1,4 +1,4 @@
-# InboxAlert 🚨
+# InboxAlert 
 
 **AI-powered email monitoring that sends WhatsApp alerts for important emails**
 
@@ -6,14 +6,14 @@ Never miss a critical email again. InboxAlert watches your Gmail and Outlook inb
 
 ---
 
-## 🎯 The Problem
+##  The Problem
 
 - Professionals receive **100+ emails per day**
 - Most are newsletters, promotions, or low-priority updates
 - Critical emails from clients, managers, or partners get buried
 - People either **miss them** or waste time **constantly checking** their inbox
 
-## ✨ The Solution
+##  The Solution
 
 InboxAlert acts as your **AI executive assistant**:
 
@@ -24,33 +24,33 @@ InboxAlert acts as your **AI executive assistant**:
 
 ---
 
-## 🚀 Features
+## Features
 
 ### Core Features
-- ✅ **Real-time email monitoring** via Gmail (Pub/Sub) and Outlook (Graph API) webhooks
-- ✅ **Two-stage AI scoring engine** (rule-based + Google Gemini)
-- ✅ **WhatsApp alerts** with interactive buttons for quick replies
-- ✅ **AI auto-reply** drafting with customizable tone
-- ✅ **Multi-account support** (connect multiple Gmail/Outlook accounts)
-- ✅ **Email history dashboard** with AI summaries
-- ✅ **OAuth 2.0 authentication** (Google + Microsoft)
+-  **Real-time email monitoring** via Gmail (Pub/Sub) and Outlook (Graph API) webhooks
+-  **Two-stage AI scoring engine** (rule-based + Google Gemini)
+-  **WhatsApp alerts** with interactive buttons for quick replies
+-  **AI auto-reply** drafting with customizable tone
+-  **Multi-account support** (connect multiple Gmail/Outlook accounts)
+-  **Email history dashboard** with AI summaries
+-  **OAuth 2.0 authentication** (Google + Microsoft)
 
 ### Security
-- 🔒 **AES-256 encryption** for OAuth tokens at rest
-- 🔒 **RS256 JWT** authentication
-- 🔒 **Rate limiting** on all API endpoints
-- 🔒 **Webhook signature verification**
-- 🔒 **No passwords stored** — only OAuth tokens
+-  **AES-256 encryption** for OAuth tokens at rest
+-  **RS256 JWT** authentication
+-  **Rate limiting** on all API endpoints
+-  **Webhook signature verification**
+-  **No passwords stored** — only OAuth tokens
 
 ### Scalability
-- ⚡ **Async processing** with Celery + Redis
-- ⚡ **Multi-tenant architecture**
-- ⚡ **Docker containerized**
-- ⚡ **Horizontal scaling ready**
+-  **Async processing** with Celery + Redis
+-  **Multi-tenant architecture**
+-  **Docker containerized**
+-  **Horizontal scaling ready**
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -90,12 +90,12 @@ InboxAlert acts as your **AI executive assistant**:
                      ↓ YES
 ┌─────────────────────────────────────────────────────────────┐
 │              WhatsApp  (Meta)                       │
-│  🚨 Important Email Alert (Score: 94)                       │
+│   Important Email Alert (Score: 94)                       │
 │                                                             │
-│  👤 From: client@company.com                                │
-│  📌 Subject: Contract needs signature today                 │
+│   From: client@company.com                                │
+│   Subject: Contract needs signature today                 │
 │                                                             │
-│  📝 AI Summary:                                             │
+│   AI Summary:                                             │
 │  Your client needs the NDA signed before the 5 PM          │
 │  board meeting. They've sent it twice already.             │
 │                                                             │
@@ -105,7 +105,7 @@ InboxAlert acts as your **AI executive assistant**:
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
@@ -123,7 +123,7 @@ InboxAlert acts as your **AI executive assistant**:
 
 ---
 
-## 📦 Installation
+##  Installation
 
 ### Prerequisites
 
@@ -269,7 +269,7 @@ See `SETUP.md` for detailed setup instructions.
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Send a test email
 
@@ -348,20 +348,20 @@ if final_score >= 80:
 
 ---
 
-## 🔐 Security Best Practices
+##  Security Best Practices
 
-- ✅ OAuth tokens encrypted with AES-256-GCM before storage
-- ✅ JWT tokens use RS256 (asymmetric keys)
-- ✅ All API endpoints rate-limited (SlowAPI)
-- ✅ Webhook signatures verified (HMAC)
-- ✅ CORS configured for frontend only
-- ✅ Security headers (CSP, X-Frame-Options, etc.)
-- ✅ SQL injection protection (SQLAlchemy ORM)
-- ✅ No sensitive data in logs
+-  OAuth tokens encrypted with AES-256-GCM before storage
+-  JWT tokens use RS256 (asymmetric keys)
+-  All API endpoints rate-limited (SlowAPI)
+-  Webhook signatures verified (HMAC)
+-  CORS configured for frontend only
+-  Security headers (CSP, X-Frame-Options, etc.)
+-  SQL injection protection (SQLAlchemy ORM)
+-  No sensitive data in logs
 
 ---
 
-## 📈 Scalability
+##  Scalability
 
 ### Current Architecture
 - Single server handles ~1000 emails/hour
@@ -378,20 +378,9 @@ if final_score >= 80:
 
 ---
 
-## 💰 Cost Breakdown (per 1000 emails/day)
 
-| Service | Cost | Notes |
-|---------|------|-------|
-| **Gemini AI** | ~$3/month | $0.0001 per email (rule engine skips ~40%) |
-| **WhatsApp (Meta)** | ~$1.50/month | $0.005-0.03 per conversation |
-| **Google Cloud** | ~$10/month | Pub/Sub + Cloud Run (small instance) |
-| **Database** | ~$7/month | Cloud SQL (db-f1-micro) |
-| **Redis** | ~$5/month | Cloud Memorystore (1GB) |
-| **Total** | **~$26.50/month** | For 1000 emails/day, ~200 alerts/month |
 
----
-
-## 🗺️ Roadmap
+## Roadmap
 
 - [ ] Slack integration (alternative to WhatsApp)
 - [ ] Custom scoring rules (user-defined keywords)
@@ -416,7 +405,7 @@ Contributions are welcome! Please:
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -431,15 +420,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 📞 Support
+##  Support
 
 - **Documentation:** See `docs/` folder
-- **Issues:** [GitHub Issues](https://github.com/yourusername/inboxalert/issues)
+- **Issues:** [GitHub Issues](https://github.com/prathamc00/inboxalert/issues)
 - **Email:** support@inboxalert.com
 
 ---
 
-## 🎯 Use Cases
+## Use Cases
 
 ### For Founders
 "Never miss an investor email or customer complaint while focusing on building."
@@ -455,6 +444,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ by Pratham**
+**Built with L by Pratham**
 
-⭐ Star this repo if you find it useful!
+ Star this repo if you find it useful!
