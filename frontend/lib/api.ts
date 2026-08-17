@@ -21,26 +21,11 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Helper: returns true when the current session is a demo session
-const isDemoSession = () =>
-  typeof window !== "undefined" &&
-  localStorage.getItem("access_token")?.startsWith("demo-");
-
 // Attach access token to every request
-// Demo requests are short-circuited — they never reach the backend.
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access_token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
-    // Demo session: reject the request immediately with a synthetic response
-    // so the dashboard shows empty/fallback state without hitting the server.
-    if (token?.startsWith("demo-")) {
-      return Promise.reject({
-        isDemoShortCircuit: true,
-        config,
-        response: { status: 200, data: [], headers: {}, config },
-      });
-    }
   }
   return config;
 });
@@ -49,11 +34,6 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    // Demo short-circuit: resolve with an empty array so pages show fallback UI
-    if (error?.isDemoShortCircuit) {
-      return { ...error.response, data: Array.isArray(error.response?.data) ? [] : {} };
-    }
-
     const original = error.config;
 
     // If proxy-based request fails at network layer, retry once directly to local backend.
@@ -69,8 +49,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
-        // Never attempt a real token refresh for demo sessions
-        if (isDemoSession()) throw new Error("demo session");
         const refresh = localStorage.getItem("refresh_token");
         if (!refresh) throw new Error("no refresh token");
         const { data } = await axios.post(`${API_URL}/auth/refresh`, { refresh_token: refresh });
@@ -78,11 +56,8 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return api(original);
       } catch {
-        // Only wipe auth & redirect for real (non-demo) sessions
-        if (!isDemoSession()) {
-          localStorage.clear();
-          window.location.href = "/login";
-        }
+        localStorage.clear();
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);
