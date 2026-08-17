@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: str = ""
     WHATSAPP_APP_SECRET: str = ""
+    WHATSAPP_TEMPLATE_NAME: str = "email_alerts_v2"
 
     @field_validator(
         "GEMINI_API_KEY",

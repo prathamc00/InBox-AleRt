@@ -298,37 +298,26 @@ class MetaNotifier:
     ) -> tuple[bool, str]:
         """Send a standard email alert template.
 
-        Template body uses named parameters: email_sender, email_subject, email_summary.
-        Button at index 0 carries the cancel payload.
+        Supports multi-variable clean template (email_alerts_v2) and single-variable legacy template (email_alerts).
         """
-        # Build a clear, well-structured alert template with bold labels and line breaks.
-        combined_lines = [
-            f"*Score:* {score}/100",
-            f"*From:* {_sanitize_template_param(sender)[:120]}",
-            f"*Subject:* {_sanitize_template_param(subject)[:180]}",
-        ]
-        if summary:
-            combined_lines.append(f"\n*Summary:*\n{_sanitize_template_param(summary)[:400]}")
-        if reason:
-            combined_lines.append(f"\n*Reason:* {_sanitize_template_param(reason)[:250]}")
-        combined_text = "\n".join(combined_lines)
+        tpl_name = getattr(settings, "WHATSAPP_TEMPLATE_NAME", "email_alerts").strip() or "email_alerts"
 
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {
-                        "type": "text",
-                        "parameter_name": "email_body",
-                        "text": combined_text,
-                    }
+                    {"type": "text", "parameter_name": "score", "text": str(score)},
+                    {"type": "text", "parameter_name": "sender", "text": _sanitize_template_param(sender)[:120]},
+                    {"type": "text", "parameter_name": "subject", "text": _sanitize_template_param(subject)[:180]},
+                    {"type": "text", "parameter_name": "summary", "text": _sanitize_template_param(summary)[:400] if summary else "No summary available"},
+                    {"type": "text", "parameter_name": "reason", "text": _sanitize_template_param(reason)[:250] if reason else "Rule: Priority analysis"},
                 ],
             }
         ]
 
         return self._send_meta_template(
             to_number=to_number,
-            template_name="email_alerts",
+            template_name=tpl_name,
             components=components,
             language_code="en_US",
         )
@@ -344,27 +333,24 @@ class MetaNotifier:
         cancel_seconds: int,
         email_record_id: str,
         score: int,
+        reason: str | None = None,
     ) -> tuple[bool, str]:
-        """Send an auto-reply draft notification that requires explicit confirmation.
+        """Send an auto-reply draft notification with confirm/cancel buttons.
 
-        This uses the dedicated `auto_reply_alerts` template (body receives a
-        single `email_body` parameter containing score/from/subject/draft/count).
+        Uses `auto_reply_alerts` with named variables (score, sender, subject, reply_draft, reason).
         """
-        combined_lines = [
-            f"*Score:* {score}/100",
-            f"*From:* {_sanitize_template_param(sender)[:120]}",
-            f"*Subject:* {_sanitize_template_param(subject)[:180]}",
-            f"\n*Draft Reply:*\n{_sanitize_template_param(reply_draft)[:400]}",
-            f"\n⏱️ _Confirm or cancel within {cancel_seconds}s using the buttons below._",
-        ]
-        combined_text = "\n".join(combined_lines)
+        tpl_name = "auto_reply_alerts"
 
         components = [
             {
                 "type": "body",
                 "parameters": [
-                    {"type": "text", "parameter_name": "email_body", "text": combined_text}
-                ]
+                    {"type": "text", "parameter_name": "score", "text": str(score)},
+                    {"type": "text", "parameter_name": "sender", "text": _sanitize_template_param(sender)[:120]},
+                    {"type": "text", "parameter_name": "subject", "text": _sanitize_template_param(subject)[:180]},
+                    {"type": "text", "parameter_name": "reply_draft", "text": _sanitize_template_param(reply_draft)[:400]},
+                    {"type": "text", "parameter_name": "reason", "text": _sanitize_template_param(reason)[:250] if reason else "Priority analysis"},
+                ],
             },
             {
                 "type": "button",
@@ -383,10 +369,12 @@ class MetaNotifier:
                 ]
             }
         ]
+
         return self._send_meta_template(
             to_number=to_number,
-            template_name="auto_reply_alerts",
+            template_name=tpl_name,
             components=components,
+            language_code="en_US",
         )
 
 
