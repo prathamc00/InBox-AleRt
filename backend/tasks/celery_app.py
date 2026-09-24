@@ -381,4 +381,4 @@ async def _send_delayed_auto_reply_async(record_id: str):
             record.auto_reply_sent_at = datetime.now(timezone.utc)
             await db.commit()
         except Exception as e:
-            log.error("Failed to send delayed auto-reply", record_id=record_id, error=str(e))
+            log.error("Failed to send delayed the auto-reply", record_id=record_id, error=str(e))
